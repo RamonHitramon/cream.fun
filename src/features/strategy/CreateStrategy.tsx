@@ -70,6 +70,7 @@ export function CreateStrategy({ pairs, markets = [] }: CreateStrategyProps) {
           onLeverageChange={setLongLeverage}
           slippage={longSlippage}
           onSlippageChange={setLongSlippage}
+          markets={markets}
         />
 
         {/* Short Block */}
@@ -99,6 +100,7 @@ export function CreateStrategy({ pairs, markets = [] }: CreateStrategyProps) {
           onLeverageChange={setShortLeverage}
           slippage={shortSlippage}
           onSlippageChange={setShortSlippage}
+          markets={markets}
         />
 
         {/* Action Buttons */}

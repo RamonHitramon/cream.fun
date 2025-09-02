@@ -14,7 +14,8 @@ export function PairMultiSelect({
   pairs, 
   selectedPairs, 
   onSelectionChange, 
-  searchPlaceholder = "Search tokens (e.g., BTC, ETH, SOL…)" 
+  searchPlaceholder = "Search tokens (e.g., BTC, ETH, SOL…)",
+  markets = []
 }: PairMultiSelectProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -36,6 +37,12 @@ export function PairMultiSelect({
 
   const handleClear = () => {
     onSelectionChange([]);
+  };
+
+  // Функция для получения максимального плеча по символу
+  const getMaxLeverage = (symbol: string): number | undefined => {
+    const market = markets.find(m => m.symbol === symbol || m.display === symbol);
+    return market?.maxLeverage;
   };
 
   return (
@@ -78,11 +85,11 @@ export function PairMultiSelect({
                 type="checkbox"
                 checked={selectedPairs.includes(pair)}
                 onChange={() => handlePairToggle(pair)}
-                className="mr-2 w-4 h-4 rounded"
+                className="mr-2 w-4 h-4 rounded-full"
                 style={{
-                  accentColor: 'var(--color-hl-primary)',
-                  backgroundColor: 'var(--color-hl-bg)',
-                  borderColor: 'var(--color-hl-border)'
+                  accentColor: 'var(--color-hl-success)',
+                  backgroundColor: 'var(--color-hl-success)',
+                  borderColor: 'var(--color-hl-success)'
                 }}
               />
               <span 
@@ -91,6 +98,15 @@ export function PairMultiSelect({
                 title={pair}
               >
                 {pair}
+                {/* Максимальное плечо как текст через пробел */}
+                {getMaxLeverage(pair) && (
+                  <span 
+                    className="ml-1"
+                    style={{ color: 'var(--color-hl-success)' }}
+                  >
+                    {getMaxLeverage(pair)}x
+                  </span>
+                )}
               </span>
             </label>
           ))}

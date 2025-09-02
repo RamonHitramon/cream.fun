@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card } from '../ui/Card';
 import { PairMultiSelect } from './PairMultiSelect';
+import { PerpMarket } from '@/lib/hyperliquid/types';
 
 interface ShortBlockProps {
   pairs: string[];
@@ -12,6 +13,7 @@ interface ShortBlockProps {
   onLeverageChange: (leverage: number) => void;
   slippage: number;
   onSlippageChange: (slippage: number) => void;
+  markets?: PerpMarket[];
 }
 
 export function ShortBlock({
@@ -23,7 +25,8 @@ export function ShortBlock({
   leverage,
   onLeverageChange,
   slippage,
-  onSlippageChange
+  onSlippageChange,
+  markets = []
 }: ShortBlockProps) {
   const leverageOptions = [1, 5, 10, 20];
 
@@ -70,6 +73,7 @@ export function ShortBlock({
             pairs={pairs}
             selectedPairs={selectedPairs}
             onSelectionChange={onPairsChange}
+            markets={markets}
           />
         </div>
 
@@ -108,7 +112,11 @@ export function ShortBlock({
             value={slippage}
             onChange={(e) => onSlippageChange(parseFloat(e.target.value))}
             className="w-full h-2 rounded-lg appearance-none cursor-pointer"
-            style={{ backgroundColor: 'var(--color-hl-bg)' }}
+            style={{ 
+              backgroundColor: 'var(--color-hl-border)',
+              // Кастомные стили для slider - темно-зеленый фон с светло-зеленым бегунком
+              background: `linear-gradient(to right, var(--color-hl-success) 0%, var(--color-hl-success) ${(slippage - 0.01) / (1 - 0.01) * 100}%, var(--color-hl-border) ${(slippage - 0.01) / (1 - 0.01) * 100}%, var(--color-hl-border) 100%)`
+            }}
           />
           <div className="text-xs mt-1" style={{ color: 'var(--color-hl-muted)' }}>Max: 0.10%</div>
         </div>
