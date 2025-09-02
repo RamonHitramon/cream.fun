@@ -1,104 +1,199 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useWallet } from '@/hooks/useWallet';
-import { BasketInput, BasketTradeResult, PerpMeta } from '../builder/types';
-import { placeBasketOrders, placePairBasketOrders } from '../builder/placeBasket';
-import { builderClient } from '../builder/client';
+import { BasketInput } from '../builder/types';
+import { PerpMarket } from '@/lib/hyperliquid/types';
+import { 
+  placeBasket, 
+  placePairBasket, 
+  prepareBasketPreview, 
+  preparePairBasketPreview,
+  convertToPerpMeta,
+  PlaceBasketOptions 
+} from '../builder/placeBasket';
+import { builderClient, WalletLike } from '../builder/client';
 
-export function useBasketTrade() {
+// Импортируем типы для типизации
+import type { PreviewResult } from '../builder/placeBasket';
+import type { BasketTradeResult } from '../builder/types';
+
+export interface BasketTradeState {
+  preview: PreviewResult | null;
+  canSubmit: boolean;
+  isSubmitting: boolean;
+  lastResult: BasketTradeResult | null;
+  error: string | null;
+  warnings: string[];
+}
+
+export function useBasketTrade(markets: PerpMarket[] = []) {
   const { address, isConnected } = useWallet();
-  const [loading, setLoading] = useState(false);
-  const [lastResult, setLastResult] = useState<BasketTradeResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [state, setState] = useState<BasketTradeState>({
+    preview: null,
+    canSubmit: false,
+    isSubmitting: false,
+    lastResult: null,
+    error: null,
+    warnings: [],
+  });
+
+  // Конвертируем markets в PerpMeta для использования в функциях
+  const metas = useMemo(() => convertToPerpMeta(markets), [markets]);
+
+  /**
+   * Создает preview для корзины
+   */
+  const preview = useCallback(async (
+    input: BasketInput
+  ): Promise<PreviewResult | null> => {
+    if (!isConnected || !address) {
+      const error = 'Wallet not connected';
+      setState(prev => ({ ...prev, error, canSubmit: false }));
+      return null;
+    }
+
+    try {
+      const previewResult = prepareBasketPreview(input, metas);
+      
+      setState(prev => ({
+        ...prev,
+        preview: previewResult,
+        canSubmit: previewResult.canSubmit,
+        error: previewResult.criticalErrors.length > 0 ? previewResult.criticalErrors.join('; ') : null,
+        warnings: [...previewResult.stats.warnings, ...previewResult.stats.leverageWarnings],
+      }));
+
+      return previewResult;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setState(prev => ({ ...prev, error: errorMessage, canSubmit: false }));
+      return null;
+    }
+  }, [isConnected, address, metas]);
+
+  /**
+   * Создает preview для двухсторонней торговли
+   */
+  const previewPairBasket = useCallback(async (
+    longInput: Omit<BasketInput, 'side'>,
+    shortInput: Omit<BasketInput, 'side'>
+  ): Promise<{ long: PreviewResult; short: PreviewResult; combined: PreviewResult } | null> => {
+    if (!isConnected || !address) {
+      const error = 'Wallet not connected';
+      setState(prev => ({ ...prev, error, canSubmit: false }));
+      return null;
+    }
+
+    try {
+      const previewResult = preparePairBasketPreview(longInput, shortInput, metas);
+      
+      setState(prev => ({
+        ...prev,
+        preview: previewResult.combined,
+        canSubmit: previewResult.combined.canSubmit,
+        error: previewResult.combined.criticalErrors.length > 0 ? previewResult.combined.criticalErrors.join('; ') : null,
+        warnings: [
+          ...previewResult.combined.stats.warnings, 
+          ...previewResult.combined.stats.leverageWarnings
+        ],
+      }));
+
+      return previewResult;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setState(prev => ({ ...prev, error: errorMessage, canSubmit: false }));
+      return null;
+    }
+  }, [isConnected, address, metas]);
 
   /**
    * Размещает корзину ордеров
    */
-  const placeBasket = useCallback(async (
+  const submit = useCallback(async (
     input: BasketInput,
-    metas: PerpMeta[]
-  ): Promise<BasketTradeResult> => {
+    options?: Partial<PlaceBasketOptions>
+  ): Promise<BasketTradeResult | null> => {
     if (!isConnected || !address) {
-      const result: BasketTradeResult = {
-        success: false,
-        orders: [],
-        totalUsd: 0,
-        estimatedFees: 0,
-        error: 'Wallet not connected',
-      };
-      setLastResult(result);
-      setError('Wallet not connected');
-      return result;
+      const error = 'Wallet not connected';
+      setState(prev => ({ ...prev, error, canSubmit: false }));
+      return null;
     }
 
-    setLoading(true);
-    setError(null);
+    setState(prev => ({ ...prev, isSubmitting: true, error: null }));
 
     try {
-      const result = await placeBasketOrders(input, metas, address);
-      setLastResult(result);
+      const wallet: WalletLike = { address };
+      const submitOptions: PlaceBasketOptions = {
+        wallet,
+        retryAttempts: 3,
+        ...options,
+      };
+
+      const result = await placeBasket(input, metas, submitOptions);
       
-      if (!result.success && result.error) {
-        setError(result.error);
-      }
-      
+      setState(prev => ({
+        ...prev,
+        lastResult: result,
+        isSubmitting: false,
+        error: result.success ? null : (result.error || 'Failed to place orders'),
+      }));
+
       return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      setError(errorMessage);
+      setState(prev => ({ 
+        ...prev, 
+        isSubmitting: false, 
+        error: errorMessage 
+      }));
       
-      const result: BasketTradeResult = {
+      return {
         success: false,
         orders: [],
         totalUsd: 0,
         estimatedFees: 0,
         error: errorMessage,
       };
-      
-      setLastResult(result);
-      return result;
-    } finally {
-      setLoading(false);
     }
-  }, [isConnected, address]);
+  }, [isConnected, address, metas]);
 
   /**
    * Размещает корзину с раздельными лонг/шорт позициями
    */
-  const placePairBasket = useCallback(async (
+  const submitPairBasket = useCallback(async (
     longInput: Omit<BasketInput, 'side'>,
     shortInput: Omit<BasketInput, 'side'>,
-    metas: PerpMeta[]
+    options?: Partial<PlaceBasketOptions>
   ): Promise<BasketTradeResult[]> => {
     if (!isConnected || !address) {
-      const result: BasketTradeResult = {
-        success: false,
-        orders: [],
-        totalUsd: 0,
-        estimatedFees: 0,
-        error: 'Wallet not connected',
-      };
-      setLastResult(result);
-      setError('Wallet not connected');
-      return [result, result];
+      const error = 'Wallet not connected';
+      setState(prev => ({ ...prev, error, canSubmit: false }));
+      return [];
     }
 
-    setLoading(true);
-    setError(null);
+    setState(prev => ({ ...prev, isSubmitting: true, error: null }));
 
     try {
-      const results = await placePairBasketOrders(longInput, shortInput, metas, address);
+      const wallet: WalletLike = { address };
+      const submitOptions: PlaceBasketOptions = {
+        wallet,
+        retryAttempts: 3,
+        ...options,
+      };
+
+      const results = await placePairBasket(longInput, shortInput, metas, submitOptions);
       
       // Проверяем успешность
       const hasErrors = results.some(r => !r.success);
+      let errorMessages = '';
       if (hasErrors) {
-        const errorMessages = results
+        errorMessages = results
           .filter(r => !r.success)
           .map(r => r.error)
           .filter(Boolean)
           .join(', ');
-        setError(errorMessages);
+        setState(prev => ({ ...prev, error: errorMessages }));
       }
       
       // Устанавливаем последний результат как комбинацию
@@ -107,40 +202,40 @@ export function useBasketTrade() {
         orders: results.flatMap(r => r.orders),
         totalUsd: results.reduce((sum, r) => sum + r.totalUsd, 0),
         estimatedFees: results.reduce((sum, r) => sum + r.estimatedFees, 0),
-        error: hasErrors ? (results
-          .filter(r => !r.success)
-          .map(r => r.error)
-          .filter(Boolean)
-          .join(', ')) : undefined,
+        error: hasErrors ? errorMessages : undefined,
       };
       
-      setLastResult(combinedResult);
+      setState(prev => ({
+        ...prev,
+        lastResult: combinedResult,
+        isSubmitting: false,
+        error: hasErrors ? errorMessages : null,
+      }));
+
       return results;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      setError(errorMessage);
+      setState(prev => ({ 
+        ...prev, 
+        isSubmitting: false, 
+        error: errorMessage 
+      }));
       
-      const result: BasketTradeResult = {
-        success: false,
-        orders: [],
-        totalUsd: 0,
-        estimatedFees: 0,
-        error: errorMessage,
-      };
-      
-      setLastResult(result);
-      return [result, result];
-    } finally {
-      setLoading(false);
+      return [];
     }
-  }, [isConnected, address]);
+  }, [isConnected, address, metas]);
 
   /**
    * Очищает ошибки и результаты
    */
   const clearResults = useCallback(() => {
-    setError(null);
-    setLastResult(null);
+    setState(prev => ({
+      ...prev,
+      error: null,
+      lastResult: null,
+      preview: null,
+      warnings: [],
+    }));
   }, []);
 
   /**
@@ -149,23 +244,30 @@ export function useBasketTrade() {
   const isBuilderConfigured = builderClient.isConfigured();
   const builderInfo = builderClient.getBuilderInfo();
 
+  /**
+   * Получает статистику отправок
+   */
+  const submissionStats = builderClient.getSubmissionStats();
+
   return {
     // Состояние
-    loading,
-    lastResult,
-    error,
+    ...state,
     
     // Действия
-    placeBasket,
-    placePairBasket,
+    preview,
+    previewPairBasket,
+    submit,
+    submitPairBasket,
     clearResults,
     
     // Конфигурация
     isBuilderConfigured,
     builderInfo,
+    submissionStats,
     
     // Утилиты
     isConnected,
     address,
+    metas,
   };
 }

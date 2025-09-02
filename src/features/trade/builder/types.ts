@@ -6,18 +6,9 @@ export type BasketInput = {
   side: Side;                    // для one-sided. Для раздельного лонг/шорт будет 2 вызова
   totalUsd: number;              // общая сумма в USD
   symbols: string[];             // ['BTC','ETH',...]
-  leverage?: number;             // единое плечо (валидируй по каждой паре)
+  leverage?: number;             // единое плечо (валидируем по каждой паре)
   slippageBps?: number;          // override
   limitPxBySymbol?: Record<string, number>; // для limit
-};
-
-export type PerpMeta = {
-  symbol: string;
-  maxLeverage?: number;
-  szDecimals?: number;
-  minOrderUsd?: number; // вычислим/оценим (если нет — поставим безопасный минимум)
-  markPx?: number;
-  midPx?: number;
 };
 
 export type PreparedOrder = {
