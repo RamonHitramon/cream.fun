@@ -1,34 +1,11 @@
-import { BasketInput, PreparedOrder, BasketTradeResult, Side } from './types';
+import { BasketInput, BasketTradeResult, Side, BasketPreview } from './types';
 import { PerpMeta } from '../hl/types';
 import { PerpMarket } from '@/lib/hyperliquid/types';
-import { 
-  splitUsdAcrossSymbols, 
-  validateLeverage,
-  calculateBuilderFees,
-  applySlippage,
-  MinOrderConfig
-} from './math';
+import { previewBasket } from './preview';
 import { builderClient, WalletLike } from './client';
-
-export interface PreviewResult {
-  orders: PreparedOrder[];
-  totalUsd: number;
-  estimatedFees: number;
-  stats: {
-    totalPairs: number;
-    processedPairs: number;
-    droppedPairs: number;
-    adjustedPairs: number;
-    warnings: string[];
-    leverageWarnings: string[];
-  };
-  canSubmit: boolean;
-  criticalErrors: string[];
-}
 
 export interface PlaceBasketOptions {
   wallet: WalletLike;
-  minOrderConfig?: MinOrderConfig;
   slippageBps?: number;
   retryAttempts?: number;
 }
@@ -111,118 +88,26 @@ export function convertToPerpMeta(markets: PerpMarket[]): Record<string, PerpMet
 export function prepareBasketPreview(
   input: BasketInput,
   metas: Record<string, PerpMeta>
-): PreviewResult {
+): BasketPreview {
   // Валидация
   const validationErrors = validateBasketInput(input, metas);
   
   if (validationErrors.length > 0) {
     return {
-      orders: [],
-      totalUsd: 0,
-      estimatedFees: 0,
-      stats: {
-        totalPairs: input.symbols.length,
-        processedPairs: 0,
-        droppedPairs: input.symbols.length,
-        adjustedPairs: 0,
-        warnings: [],
-        leverageWarnings: [],
-      },
-      canSubmit: false,
-      criticalErrors: validationErrors,
+      prepared: [],
+      skipped: input.symbols.map(s => ({ symbol: s, reason: 'validation failed' })),
+      estUsedUsd: 0,
     };
   }
 
   try {
-    // Распределяем USD между парами
-    const allocation = splitUsdAcrossSymbols(
-      input.totalUsd,
-      input.symbols,
-      Object.values(metas),
-      { respectMinOrDrop: true, compensateFromOthers: true }
-    );
-
-    // Применяем slippage и устанавливаем правильные параметры
-    const orders: PreparedOrder[] = [];
-    const leverageWarnings: string[] = [];
-    let totalUsdUsed = 0;
-
-    allocation.orders.forEach(order => {
-      const meta = metas[order.symbol];
-      if (!meta) return;
-
-      // Проверяем плечо
-      if (input.leverage) {
-        const leverageCheck = validateLeverage(input.leverage, meta);
-        if (!leverageCheck.valid && leverageCheck.adjusted) {
-          leverageWarnings.push(`${order.symbol}: leverage clipped from ${input.leverage}x to ${leverageCheck.maxLeverage}x`);
-        }
-      }
-
-      // Применяем slippage для market ордеров
-      let finalPrice = meta.markPx;
-      if (input.orderType === 'market' && input.slippageBps && finalPrice) {
-        finalPrice = applySlippage(finalPrice, input.slippageBps, input.side);
-      }
-
-      // Устанавливаем limit цену
-      let limitPrice: number | undefined;
-      if (input.orderType === 'limit' && input.limitPxBySymbol) {
-        limitPrice = input.limitPxBySymbol[order.symbol];
-      }
-
-      // Пересчитываем USD после округления
-      if (finalPrice) {
-        const recalculatedUsd = order.sz * finalPrice;
-        totalUsdUsed += recalculatedUsd;
-      }
-
-      orders.push({
-        symbol: order.symbol,
-        side: input.side,
-        sz: order.sz,
-        type: input.orderType,
-        px: limitPrice,
-      });
-    });
-
-    // Рассчитываем комиссии
-    const estimatedFees = calculateBuilderFees(
-      totalUsdUsed, 
-      builderClient.getBuilderInfo().feeBps
-    );
-
-    // Определяем, можно ли отправлять
-    const canSubmit = orders.length > 0 && 
-                     allocation.stats.processedPairs > 0 && 
-                     validationErrors.length === 0;
-
+    // Используем простую функцию previewBasket
+    return previewBasket(input, metas);
+  } catch {
     return {
-      orders,
-      totalUsd: totalUsdUsed,
-      estimatedFees,
-      stats: {
-        ...allocation.stats,
-        leverageWarnings,
-      },
-      canSubmit,
-      criticalErrors: validationErrors,
-    };
-  } catch (error) {
-    return {
-      orders: [],
-      totalUsd: 0,
-      estimatedFees: 0,
-      stats: {
-        totalPairs: input.symbols.length,
-        processedPairs: 0,
-        droppedPairs: input.symbols.length,
-        adjustedPairs: 0,
-        warnings: [],
-        leverageWarnings: [],
-      },
-      canSubmit: false,
-      criticalErrors: [error instanceof Error ? error.message : 'Unknown error'],
+      prepared: [],
+      skipped: input.symbols.map(s => ({ symbol: s, reason: 'preview error' })),
+      estUsedUsd: 0,
     };
   }
 }
@@ -238,13 +123,13 @@ export async function placeBasket(
   // Подготавливаем preview
   const preview = prepareBasketPreview(input, metas);
   
-  if (!preview.canSubmit) {
+  if (preview.prepared.length === 0) {
     return {
       success: false,
       orders: [],
-      totalUsd: preview.totalUsd,
-      estimatedFees: preview.estimatedFees,
-      error: preview.criticalErrors.join('; '),
+      totalUsd: preview.estUsedUsd,
+      estimatedFees: 0,
+      error: `No orders can be prepared. Skipped: ${preview.skipped.map(s => `${s.symbol}(${s.reason})`).join(', ')}`,
     };
   }
 
@@ -253,8 +138,8 @@ export async function placeBasket(
     return {
       success: false,
       orders: [],
-      totalUsd: preview.totalUsd,
-      estimatedFees: preview.estimatedFees,
+      totalUsd: preview.estUsedUsd,
+      estimatedFees: 0,
       error: 'Builder Codes not configured. Please set NEXT_PUBLIC_BUILDER_ADDRESS in environment variables.',
     };
   }
@@ -262,7 +147,7 @@ export async function placeBasket(
   try {
     // Отправляем ордера через Builder Codes
     const result = await builderClient.signAndSubmit(
-      preview.orders,
+      preview.prepared,
       {
         builderAddress: builderClient.getBuilderInfo().address,
         builderFeeBps: builderClient.getBuilderInfo().feeBps,
@@ -274,16 +159,16 @@ export async function placeBasket(
     if (result.success) {
       return {
         success: true,
-        orders: preview.orders,
-        totalUsd: preview.totalUsd,
-        estimatedFees: preview.estimatedFees,
+        orders: preview.prepared,
+        totalUsd: preview.estUsedUsd,
+        estimatedFees: 0, // Будет рассчитано на основе суммы
       };
     } else {
       return {
         success: false,
         orders: [],
-        totalUsd: preview.totalUsd,
-        estimatedFees: preview.estimatedFees,
+        totalUsd: preview.estUsedUsd,
+        estimatedFees: 0,
         error: result.error || 'Failed to submit orders',
       };
     }
@@ -291,8 +176,8 @@ export async function placeBasket(
     return {
       success: false,
       orders: [],
-      totalUsd: preview.totalUsd,
-      estimatedFees: preview.estimatedFees,
+      totalUsd: preview.estUsedUsd,
+      estimatedFees: 0,
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
@@ -329,25 +214,15 @@ export function preparePairBasketPreview(
   longInput: Omit<BasketInput, 'side'>,
   shortInput: Omit<BasketInput, 'side'>,
   metas: Record<string, PerpMeta>
-): { long: PreviewResult; short: PreviewResult; combined: PreviewResult } {
+): { long: BasketPreview; short: BasketPreview; combined: BasketPreview } {
   const longPreview = prepareBasketPreview({ ...longInput, side: 'BUY' }, metas);
   const shortPreview = prepareBasketPreview({ ...shortInput, side: 'SELL' }, metas);
 
   // Комбинированная статистика
-  const combined = {
-    orders: [...longPreview.orders, ...shortPreview.orders],
-    totalUsd: longPreview.totalUsd + shortPreview.totalUsd,
-    estimatedFees: longPreview.estimatedFees + shortPreview.estimatedFees,
-    stats: {
-      totalPairs: longPreview.stats.totalPairs + shortPreview.stats.totalPairs,
-      processedPairs: longPreview.stats.processedPairs + shortPreview.stats.processedPairs,
-      droppedPairs: longPreview.stats.droppedPairs + shortPreview.stats.droppedPairs,
-      adjustedPairs: longPreview.stats.adjustedPairs + shortPreview.stats.adjustedPairs,
-      warnings: [...longPreview.stats.warnings, ...shortPreview.stats.warnings],
-      leverageWarnings: [...longPreview.stats.leverageWarnings, ...shortPreview.stats.leverageWarnings],
-    },
-    canSubmit: longPreview.canSubmit && shortPreview.canSubmit,
-    criticalErrors: [...longPreview.criticalErrors, ...shortPreview.criticalErrors],
+  const combined: BasketPreview = {
+    prepared: [...longPreview.prepared, ...shortPreview.prepared],
+    skipped: [...longPreview.skipped, ...shortPreview.skipped],
+    estUsedUsd: longPreview.estUsedUsd + shortPreview.estUsedUsd,
   };
 
   return { long: longPreview, short: shortPreview, combined };

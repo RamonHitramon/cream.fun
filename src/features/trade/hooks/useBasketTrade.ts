@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { useWallet } from '@/hooks/useWallet';
-import { BasketInput } from '../builder/types';
+import { BasketInput, BasketPreview, BasketTradeResult } from '../builder/types';
 import { PerpMarket } from '@/lib/hyperliquid/types';
 import { 
   placeBasket, 
@@ -14,12 +14,8 @@ import {
 } from '../builder/placeBasket';
 import { builderClient, WalletLike } from '../builder/client';
 
-// Импортируем типы для типизации
-import type { PreviewResult } from '../builder/placeBasket';
-import type { BasketTradeResult } from '../builder/types';
-
 export interface BasketTradeState {
-  preview: PreviewResult | null;
+  preview: BasketPreview | null;
   canSubmit: boolean;
   isSubmitting: boolean;
   lastResult: BasketTradeResult | null;
@@ -46,7 +42,7 @@ export function useBasketTrade(markets: PerpMarket[] = []) {
    */
   const preview = useCallback(async (
     input: BasketInput
-  ): Promise<PreviewResult | null> => {
+  ): Promise<BasketPreview | null> => {
     if (!isConnected || !address) {
       const error = 'Wallet not connected';
       setState(prev => ({ ...prev, error, canSubmit: false }));
@@ -56,12 +52,18 @@ export function useBasketTrade(markets: PerpMarket[] = []) {
     try {
       const previewResult = prepareBasketPreview(input, metas);
       
+      // Определяем, можно ли отправлять
+      const canSubmit = previewResult.prepared.length > 0;
+      
+      // Собираем предупреждения из пропущенных пар
+      const warnings = previewResult.skipped.map(s => `${s.symbol}: ${s.reason}`);
+      
       setState(prev => ({
         ...prev,
         preview: previewResult,
-        canSubmit: previewResult.canSubmit,
-        error: previewResult.criticalErrors.length > 0 ? previewResult.criticalErrors.join('; ') : null,
-        warnings: [...previewResult.stats.warnings, ...previewResult.stats.leverageWarnings],
+        canSubmit,
+        error: null,
+        warnings,
       }));
 
       return previewResult;
@@ -78,7 +80,7 @@ export function useBasketTrade(markets: PerpMarket[] = []) {
   const previewPairBasket = useCallback(async (
     longInput: Omit<BasketInput, 'side'>,
     shortInput: Omit<BasketInput, 'side'>
-  ): Promise<{ long: PreviewResult; short: PreviewResult; combined: PreviewResult } | null> => {
+  ): Promise<{ long: BasketPreview; short: BasketPreview; combined: BasketPreview } | null> => {
     if (!isConnected || !address) {
       const error = 'Wallet not connected';
       setState(prev => ({ ...prev, error, canSubmit: false }));
@@ -88,15 +90,18 @@ export function useBasketTrade(markets: PerpMarket[] = []) {
     try {
       const previewResult = preparePairBasketPreview(longInput, shortInput, metas);
       
+      // Определяем, можно ли отправлять
+      const canSubmit = previewResult.combined.prepared.length > 0;
+      
+      // Собираем предупреждения из пропущенных пар
+      const warnings = previewResult.combined.skipped.map(s => `${s.symbol}: ${s.reason}`);
+      
       setState(prev => ({
         ...prev,
         preview: previewResult.combined,
-        canSubmit: previewResult.combined.canSubmit,
-        error: previewResult.combined.criticalErrors.length > 0 ? previewResult.combined.criticalErrors.join('; ') : null,
-        warnings: [
-          ...previewResult.combined.stats.warnings, 
-          ...previewResult.combined.stats.leverageWarnings
-        ],
+        canSubmit,
+        error: null,
+        warnings,
       }));
 
       return previewResult;

@@ -19,6 +19,12 @@ export type PreparedOrder = {
   px?: number;           // для limit
 };
 
+export type BasketPreview = {
+  prepared: PreparedOrder[];
+  skipped: { symbol: string; reason: string }[];
+  estUsedUsd: number;
+};
+
 export type BasketTradeResult = {
   success: boolean;
   orders: PreparedOrder[];
