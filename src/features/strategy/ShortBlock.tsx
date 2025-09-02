@@ -113,9 +113,9 @@ export function ShortBlock({
             onChange={(e) => onSlippageChange(parseFloat(e.target.value))}
             className="w-full h-2 rounded-lg appearance-none cursor-pointer"
             style={{ 
-              backgroundColor: 'var(--color-hl-border)',
-              // Кастомные стили для slider - темно-зеленый фон с светло-зеленым бегунком
-              background: `linear-gradient(to right, var(--color-hl-success) 0%, var(--color-hl-success) ${(slippage - 0.01) / (1 - 0.01) * 100}%, var(--color-hl-border) ${(slippage - 0.01) / (1 - 0.01) * 100}%, var(--color-hl-border) 100%)`
+              backgroundColor: 'var(--color-hl-success)',
+              // Кастомные стили для slider - фон как у кнопки ALL, бегунок ярко-зеленый
+              background: `linear-gradient(to right, var(--color-hl-success) 0%, var(--color-hl-success) ${(slippage - 0.01) / (1 - 0.01) * 100}%, var(--color-hl-success) ${(slippage - 0.01) / (1 - 0.01) * 100}%, var(--color-hl-success) 100%)`
             }}
           />
           <div className="text-xs mt-1" style={{ color: 'var(--color-hl-muted)' }}>Max: 0.10%</div>

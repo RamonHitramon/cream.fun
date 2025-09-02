@@ -53,33 +53,30 @@ export function PairMultiSelect({
           placeholder={searchPlaceholder}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1 rounded-lg px-3 py-2 focus:outline-none"
-          style={{ 
-            backgroundColor: 'var(--color-hl-bg)', 
-            border: '1px solid var(--color-hl-border)',
-            color: 'var(--color-hl-text)'
+          className="flex-1 px-3 py-2 rounded-lg text-sm"
+          style={{
+            backgroundColor: 'var(--color-hl-surface)',
+            color: 'var(--color-hl-text)',
+            border: '1px solid var(--color-hl-border)'
           }}
           onFocus={(e) => e.target.style.borderColor = 'var(--color-hl-primary)'}
           onBlur={(e) => e.target.style.borderColor = 'var(--color-hl-border)'}
         />
-        <Button variant="success" onClick={handleSelectAll}>
-          All
-        </Button>
-        <Button variant="danger" onClick={handleClear}>
-          Clear
-        </Button>
+        <Button variant="success" onClick={handleSelectAll}>All</Button>
+        <Button variant="danger" onClick={handleClear}>Clear</Button>
       </div>
-      
+
       <div className="max-h-48 overflow-y-auto">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
           {filteredPairs.map((pair) => (
-            <label
+            <div
               key={pair}
               className="flex items-center p-2 rounded-lg cursor-pointer transition-colors hover:bg-white/5"
               style={{
                 backgroundColor: selectedPairs.includes(pair) ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
                 border: selectedPairs.includes(pair) ? '1px solid var(--color-hl-primary)' : '1px solid transparent'
               }}
+              onClick={() => handlePairToggle(pair)}
             >
               <input
                 type="checkbox"
@@ -88,9 +85,10 @@ export function PairMultiSelect({
                 className="mr-2 w-4 h-4 rounded-full"
                 style={{
                   accentColor: 'var(--color-hl-success)',
-                  backgroundColor: 'var(--color-hl-success)',
-                  borderColor: 'var(--color-hl-success)'
+                  backgroundColor: selectedPairs.includes(pair) ? 'var(--color-hl-success)' : 'transparent',
+                  border: '2px solid var(--color-hl-success)'
                 }}
+                onClick={(e) => e.stopPropagation()}
               />
               <span 
                 className="text-sm truncate" 
@@ -108,7 +106,7 @@ export function PairMultiSelect({
                   </span>
                 )}
               </span>
-            </label>
+            </div>
           ))}
         </div>
       </div>
