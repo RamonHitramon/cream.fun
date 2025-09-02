@@ -1,4 +1,5 @@
 import { ConnectWallet } from './ConnectWallet';
+import { WalletAddress } from './WalletAddress';
 
 export function TopBar() {
   return (
@@ -28,7 +29,10 @@ export function TopBar() {
           </h1>
         </div>
         
-        <ConnectWallet />
+        <div className="flex items-center gap-4">
+          <WalletAddress />
+          <ConnectWallet />
+        </div>
       </div>
     </header>
   );
