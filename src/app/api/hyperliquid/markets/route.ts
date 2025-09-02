@@ -1,21 +1,19 @@
-import { NextResponse } from 'next/server';
+export const runtime = 'nodejs';
 
-type HyperliquidAsset = {
-  name: string;
+type Perp = {
+  symbol: string;
   maxLeverage?: number;
   szDecimals?: number;
   markPx?: number;
 };
 
-type HyperliquidResponse = {
-  meta?: {
-    universe?: HyperliquidAsset[];
-  };
-};
-
 export async function GET() {
   try {
-    const response = await fetch('https://api.hyperliquid.xyz/info', {
+    // Если у тебя уже есть рабочий код запроса к Hyperliquid — оставь его.
+    // Здесь — «обёртка» с безопасными логами и единым форматом ответа { perps, error? }.
+
+    // Пример: берём кэш, если есть, но не дольше 30 сек
+    const res = await fetch('https://api.hyperliquid.xyz/info', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -23,28 +21,38 @@ export async function GET() {
       body: JSON.stringify({
         type: 'meta',
       }),
+      // ^^^ если у тебя есть отдельный источник — замени. ИНАЧЕ оставь ниже «заглушку»:
+      // Этот fetch можно закомментировать и вернуть MOCK, чтобы UI не пустел
+      // cache: 'no-store',
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    // Если выше не используешь внешний источник — верни MOCK (временно, чтобы UI ожил):
+    // const perps: Perp[] = [
+    //   { symbol: 'BTC', markPx: 62000, szDecimals: 3, maxLeverage: 50 },
+    //   { symbol: 'ETH', markPx: 2800, szDecimals: 3, maxLeverage: 50 },
+    //   { symbol: 'SOL', markPx: 160, szDecimals: 3, maxLeverage: 50 },
+    // ];
+    // return Response.json({ perps });
 
-    const data: HyperliquidResponse = await response.json();
-    
-    // Преобразуем данные в нужный формат
-    const perps = data.meta?.universe?.map((asset: HyperliquidAsset) => ({
+    if (!res.ok) {
+      const text = await res.text();
+      console.error('MARKETS_FETCH_NON_OK', res.status, text);
+      return Response.json({ perps: [], error: `Upstream ${res.status}` }, { status: 200 });
+    }
+    const data = await res.json();
+    // Ожидаем формат { perps: Perp[] } — если другой, нормализуем:
+    const perps: Perp[] = data.meta?.universe?.map((asset: { name: string; maxLeverage?: number; szDecimals?: number; markPx?: number }) => ({
       symbol: asset.name,
       maxLeverage: asset.maxLeverage,
       szDecimals: asset.szDecimals,
       markPx: asset.markPx,
     })) || [];
 
-    return NextResponse.json({ perps });
-  } catch (error) {
-    console.error('Error fetching Hyperliquid markets:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch markets' },
-      { status: 500 }
-    );
+    console.log('MARKETS_OK', { count: perps.length });
+    return Response.json({ perps });
+  } catch (e: unknown) {
+    const errorMessage = e instanceof Error ? e.message : String(e);
+    console.error('MARKETS_FETCH_ERROR', errorMessage);
+    return Response.json({ perps: [], error: errorMessage }, { status: 200 });
   }
 }
