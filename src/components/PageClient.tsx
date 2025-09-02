@@ -5,7 +5,7 @@ import { KPIPanel } from '@/features/ui/KPI';
 import { CreateStrategy } from '@/features/strategy/CreateStrategy';
 import { ActivePositions } from '@/features/positions/ActivePositions';
 import { useMarketData } from '@/components/MarketDataProvider';
-import { usePerpMetas } from '@/features/trade/hooks/usePerpMetas';
+import { usePerpMetas } from '@/features/trade/hl/usePerpMetas';
 import { LoadingState } from '@/features/ui/LoadingState';
 import { TopBar } from '@/components/TopBar';
 
@@ -26,7 +26,7 @@ const kpiData = [
 
 export function PageClient() {
   const { markets, loading, error, refetch } = useMarketData();
-  const metas = usePerpMetas(); // Получаем метаданные перпов
+  const { metas } = usePerpMetas(); // Получаем метаданные перпов
   
   const marketPairs = markets.map(market => market.display);
 

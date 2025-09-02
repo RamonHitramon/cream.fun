@@ -2,16 +2,18 @@
 import { useState } from 'react';
 import { previewBasket } from '@/features/trade/basket/preview';
 import type { BasketInput, BasketPreview } from '@/features/trade/basket/types';
-import { usePerpMetas } from '@/features/trade/hooks/usePerpMetas';
+import { usePerpMetas } from '@/features/trade/hl/usePerpMetas';
 
 export default function CreateStrategyPreviewBlock() {
-  const metas = usePerpMetas();
+  const { metas, isLoading, error } = usePerpMetas();
   const [amount, setAmount] = useState<number>(1000);
   const [selected, setSelected] = useState<string[]>(['BTC','ETH']);
   const [side, setSide] = useState<'BUY'|'SELL'>('BUY');
   const [preview, setPreview] = useState<BasketPreview | null>(null);
 
-  if (!metas || Object.keys(metas).length === 0) return <div className="text-hl-muted p-2">Loading markets...</div>;
+  if (error) return <div className="text-hl-danger p-2">Failed to load markets</div>;
+  if (isLoading) return <div className="text-hl-muted p-2">Loading markets...</div>;
+  if (!metas || Object.keys(metas).length === 0) return <div className="text-hl-muted p-2">No markets available</div>;
 
   const build = () => {
     const input: BasketInput = {
