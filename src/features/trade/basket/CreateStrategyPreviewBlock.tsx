@@ -4,11 +4,14 @@ import { previewBasket } from '@/features/trade/basket/preview';
 import type { BasketInput, BasketPreview } from '@/features/trade/basket/types';
 import { usePerpMetas } from '@/features/trade/hl/usePerpMetas';
 
-export default function CreateStrategyPreviewBlock({ selectedSymbols }: { selectedSymbols: string[] }) {
+export default function CreateStrategyPreviewBlock() {
   const { metas, isLoading, error } = usePerpMetas();
   const [amount, setAmount] = useState<number>(1000);
   const [side, setSide] = useState<'BUY'|'SELL'>('BUY');
   const [preview, setPreview] = useState<BasketPreview | null>(null);
+  
+  // Моковые символы для демонстрации
+  const mockSymbols = ['BTC', 'ETH', 'SOL'];
 
   if (error) return <div className="text-hl-danger p-2">Failed to load markets</div>;
   if (isLoading) return <div className="text-hl-muted p-2">Loading markets...</div>;
@@ -19,7 +22,7 @@ export default function CreateStrategyPreviewBlock({ selectedSymbols }: { select
       orderType: 'market',
       side,
       totalUsd: amount,
-      symbols: selectedSymbols,
+      symbols: mockSymbols,
     };
     const pv = previewBasket(input, metas);
     setPreview(pv);
@@ -63,10 +66,8 @@ export default function CreateStrategyPreviewBlock({ selectedSymbols }: { select
       </div>
 
       <div className="space-y-2">
-        <div className="text-sm text-hl-muted">Selected pairs: {selectedSymbols.join(', ')}</div>
-        {selectedSymbols.length === 0 && (
-          <div className="text-sm text-hl-muted italic">No pairs selected. Please select pairs from the strategy form above.</div>
-        )}
+        <div className="text-sm text-hl-muted">Selected pairs: {mockSymbols.join(', ')}</div>
+        <div className="text-sm text-hl-muted italic">Demo mode: Using mock pairs for demonstration</div>
       </div>
 
       {preview && (
