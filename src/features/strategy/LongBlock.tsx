@@ -13,15 +13,15 @@ export interface LongBlockProps {
 export function LongBlock({ pairs, markets, metas }: LongBlockProps) {
   return (
     <Card>
-      <div className="p-4">
-        <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-hl-success)' }}>
+      <div className="p-3">
+        <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--color-hl-success)' }}>
           Long Positions
         </h3>
         
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Pair Selection */}
           <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-hl-text)' }}>
+            <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-hl-text)' }}>
               Select Pairs
             </label>
             <PairMultiSelect pairs={pairs} markets={markets} metas={metas} />
@@ -29,7 +29,7 @@ export function LongBlock({ pairs, markets, metas }: LongBlockProps) {
           
           {/* USD Amount */}
           <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-hl-text)' }}>
+            <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-hl-text)' }}>
               USD Amount
             </label>
             <input
@@ -46,7 +46,7 @@ export function LongBlock({ pairs, markets, metas }: LongBlockProps) {
           
           {/* Leverage */}
           <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-hl-text)' }}>
+            <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-hl-text)' }}>
               Leverage
             </label>
             <input
@@ -63,7 +63,7 @@ export function LongBlock({ pairs, markets, metas }: LongBlockProps) {
           
           {/* Slippage */}
           <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-hl-text)' }}>
+            <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-hl-text)' }}>
               Slippage (%)
             </label>
             <input
