@@ -5,6 +5,7 @@ import { KPIPanel } from '@/features/ui/KPI';
 import { CreateStrategy } from '@/features/strategy/CreateStrategy';
 import { ActivePositions } from '@/features/positions/ActivePositions';
 import { useMarketData } from '@/components/MarketDataProvider';
+import { usePerpMetas } from '@/features/trade/hooks/usePerpMetas';
 import { LoadingState } from '@/features/ui/LoadingState';
 import { TopBar } from '@/components/TopBar';
 
@@ -25,6 +26,8 @@ const kpiData = [
 
 export function PageClient() {
   const { markets, loading, error, refetch } = useMarketData();
+  const metas = usePerpMetas(); // Получаем метаданные перпов
+  
   const marketPairs = markets.map(market => market.display);
 
   // Update KPI data with real market count and refresh button
@@ -43,6 +46,11 @@ export function PageClient() {
     }
   ];
 
+  // Логируем метаданные для отладки
+  console.log('Markets:', markets);
+  console.log('Perp Metas:', metas);
+  console.log('Market Pairs:', marketPairs);
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-hl-bg)' }}>
       {/* TopBar */}
@@ -57,7 +65,7 @@ export function PageClient() {
           <div className="grid grid-cols-1 xl:grid-cols-[minmax(680px,1fr)_minmax(460px,0.8fr)] gap-6">
             {/* Left Column - Create Strategy */}
             <div>
-              <CreateStrategy pairs={marketPairs} markets={markets} />
+              <CreateStrategy pairs={marketPairs} markets={markets} metas={metas} />
             </div>
 
             {/* Right Column - Active Positions */}

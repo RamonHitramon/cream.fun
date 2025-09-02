@@ -1,118 +1,85 @@
 import React from 'react';
-import { Card } from '../ui/Card';
+import { Card } from '@/features/ui/Card';
 import { PairMultiSelect } from './PairMultiSelect';
 import { PerpMarket } from '@/lib/hyperliquid/types';
+import { PerpMetaMap } from '@/features/trade/hl/types';
 
-interface LongBlockProps {
+export interface LongBlockProps {
   pairs: string[];
-  selectedPairs: string[];
-  onPairsChange: (pairs: string[]) => void;
-  notional: string;
-  onNotionalChange: (value: string) => void;
-  leverage: number;
-  onLeverageChange: (leverage: number) => void;
-  slippage: number;
-  onSlippageChange: (slippage: number) => void;
-  markets?: PerpMarket[];
+  markets: PerpMarket[];
+  metas: PerpMetaMap;
 }
 
-export function LongBlock({
-  pairs,
-  selectedPairs,
-  onPairsChange,
-  notional,
-  onNotionalChange,
-  leverage,
-  onLeverageChange,
-  slippage,
-  onSlippageChange,
-  markets = []
-}: LongBlockProps) {
-  const leverageOptions = [1, 5, 10, 20];
-
+export function LongBlock({ pairs, markets, metas }: LongBlockProps) {
   return (
-    <Card className="p-6">
-      <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-hl-success)' }}>
-        Long Positions
-      </h3>
-      
-      <div className="space-y-6">
-        {/* Notional Input */}
-        <div>
-          <label className="block text-sm mb-2" style={{ color: 'var(--color-hl-muted)' }}>
-            Long Notional (USDT)
-          </label>
-          <div className="relative">
+    <Card>
+      <div className="p-4">
+        <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-hl-success)' }}>
+          Long Positions
+        </h3>
+        
+        <div className="space-y-4">
+          {/* Pair Selection */}
+          <div>
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-hl-text)' }}>
+              Select Pairs
+            </label>
+            <PairMultiSelect pairs={pairs} markets={markets} metas={metas} />
+          </div>
+          
+          {/* USD Amount */}
+          <div>
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-hl-text)' }}>
+              USD Amount
+            </label>
             <input
               type="number"
               placeholder="1000"
-              value={notional}
-              onChange={(e) => onNotionalChange(e.target.value)}
-              className="w-full rounded-lg px-3 py-2 pr-16 focus:outline-none"
-              style={{ 
-                backgroundColor: 'var(--color-hl-bg)', 
-                border: '1px solid var(--color-hl-border)',
+              className="w-full px-3 py-2 rounded-lg border"
+              style={{
+                backgroundColor: 'var(--color-hl-surface)',
+                borderColor: 'var(--color-hl-border)',
                 color: 'var(--color-hl-text)'
               }}
-              onFocus={(e) => e.target.style.borderColor = 'var(--color-hl-primary)'}
-              onBlur={(e) => e.target.style.borderColor = 'var(--color-hl-border)'}
             />
-            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm" style={{ color: 'var(--color-hl-muted)' }}>
-              USDT
-            </span>
           </div>
-        </div>
-
-        {/* Pair Selection */}
-        <div>
-          <label className="block text-sm mb-2" style={{ color: 'var(--color-hl-muted)' }}>
-            Select Pairs
-          </label>
-          <PairMultiSelect
-            pairs={pairs}
-            selectedPairs={selectedPairs}
-            onSelectionChange={onPairsChange}
-            markets={markets}
-          />
-        </div>
-
-        {/* Leverage Selection */}
-        <div>
-          <label className="block text-sm mb-2" style={{ color: 'var(--color-hl-muted)' }}>
-            Leverage
-          </label>
-          <div className="flex gap-2">
-            {leverageOptions.map((option) => (
-              <button
-                key={option}
-                onClick={() => onLeverageChange(option)}
-                className="chip hover:bg-white/5"
-                style={{
-                  backgroundColor: leverage === option ? 'var(--color-hl-primary)' : 'transparent',
-                  color: leverage === option ? 'black' : 'var(--color-hl-text)'
-                }}
-              >
-                {option}x
-              </button>
-            ))}
+          
+          {/* Leverage */}
+          <div>
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-hl-text)' }}>
+              Leverage
+            </label>
+            <input
+              type="number"
+              placeholder="10"
+              className="w-full px-3 py-2 rounded-lg border"
+              style={{
+                backgroundColor: 'var(--color-hl-surface)',
+                borderColor: 'var(--color-hl-border)',
+                color: 'var(--color-hl-text)'
+              }}
+            />
           </div>
-        </div>
-
-        {/* Slippage */}
-        <div>
-          <label className="block text-sm mb-2" style={{ color: 'var(--color-hl-muted)' }}>
-            Max Slippage: {slippage}%
-          </label>
-          <input
-            type="range"
-            min="0.01"
-            max="1"
-            step="0.01"
-            value={slippage}
-            onChange={(e) => onSlippageChange(parseFloat(e.target.value))}
-            className="w-full h-2 rounded-lg hl-range cursor-pointer"
-          />
-          <div className="text-xs mt-1" style={{ color: 'var(--color-hl-muted)' }}>Max: 0.10%</div>
+          
+          {/* Slippage */}
+          <div>
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-hl-text)' }}>
+              Slippage (%)
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="10"
+              step="0.1"
+              defaultValue="1"
+              className="hl-range w-full"
+            />
+            <div className="flex justify-between text-xs mt-1" style={{ color: 'var(--color-hl-muted)' }}>
+              <span>0%</span>
+              <span>1%</span>
+              <span>10%</span>
+            </div>
+          </div>
         </div>
       </div>
     </Card>

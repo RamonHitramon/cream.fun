@@ -1,112 +1,152 @@
-import React, { useState } from 'react';
-import { Button } from '../ui/Button';
+import React, { useState, useMemo } from 'react';
 import { PerpMarket } from '@/lib/hyperliquid/types';
+import { PerpMetaMap } from '@/features/trade/hl/types';
 
-interface PairMultiSelectProps {
+export interface PairMultiSelectProps {
   pairs: string[];
-  selectedPairs: string[];
-  onSelectionChange: (pairs: string[]) => void;
-  searchPlaceholder?: string;
-  markets?: PerpMarket[];
+  markets: PerpMarket[];
+  metas: PerpMetaMap;
 }
 
-export function PairMultiSelect({ 
-  pairs, 
-  selectedPairs, 
-  onSelectionChange, 
-  searchPlaceholder = "Search tokens (e.g., BTC, ETH, SOL…)",
-  markets = []
-}: PairMultiSelectProps) {
+export function PairMultiSelect({ pairs, metas }: PairMultiSelectProps) {
+  const [selectedPairs, setSelectedPairs] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredPairs = pairs.filter(pair =>
-    pair.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Фильтруем пары по поиску
+  const filteredPairs = useMemo(() => {
+    if (!searchTerm) return pairs;
+    return pairs.filter(pair => 
+      pair.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [pairs, searchTerm]);
 
+  // Обработчик выбора/отмены пары
   const handlePairToggle = (pair: string) => {
-    if (selectedPairs.includes(pair)) {
-      onSelectionChange(selectedPairs.filter(p => p !== pair));
-    } else {
-      onSelectionChange([...selectedPairs, pair]);
-    }
+    setSelectedPairs(prev => 
+      prev.includes(pair) 
+        ? prev.filter(p => p !== pair)
+        : [...prev, pair]
+    );
   };
 
+  // Выбрать все отфильтрованные пары
   const handleSelectAll = () => {
-    // Выбираем все отфильтрованные пары
-    const allFilteredPairs = [...new Set([...selectedPairs, ...filteredPairs])];
-    onSelectionChange(allFilteredPairs);
+    setSelectedPairs(prev => {
+      const newSelected = [...prev];
+      filteredPairs.forEach(pair => {
+        if (!newSelected.includes(pair)) {
+          newSelected.push(pair);
+        }
+      });
+      return newSelected;
+    });
   };
 
+  // Очистить все выбранные пары
   const handleClear = () => {
-    // Очищаем все выбранные пары
-    onSelectionChange([]);
+    setSelectedPairs([]);
   };
 
-  // Функция для получения максимального плеча по символу
-  const getMaxLeverage = (symbol: string): number | undefined => {
-    const market = markets.find(m => m.symbol === symbol || m.display === symbol);
-    return market?.maxLeverage;
+  // Получить maxLeverage для пары
+  const getMaxLeverage = (pair: string): string => {
+    const meta = metas[pair];
+    if (meta?.maxLeverage) {
+      return `${meta.maxLeverage}x`;
+    }
+    return 'N/A';
   };
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-2">
+      {/* Поиск */}
+      <div>
         <input
           type="text"
-          placeholder={searchPlaceholder}
+          placeholder="Search pairs..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1 px-3 py-2 rounded-lg text-sm"
+          className="w-full px-3 py-2 rounded-lg border text-sm"
           style={{
             backgroundColor: 'var(--color-hl-surface)',
-            color: 'var(--color-hl-text)',
-            border: '1px solid var(--color-hl-border)'
+            borderColor: 'var(--color-hl-border)',
+            color: 'var(--color-hl-text)'
           }}
-          onFocus={(e) => e.target.style.borderColor = 'var(--color-hl-primary)'}
-          onBlur={(e) => e.target.style.borderColor = 'var(--color-hl-border)'}
         />
-        <Button variant="success" onClick={handleSelectAll}>All</Button>
-        <Button variant="danger" onClick={handleClear}>Clear</Button>
       </div>
 
-      <div className="max-h-48 overflow-y-auto pairs-scroll">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-          {filteredPairs.map((pair) => (
-            <label
-              key={pair}
-              className="flex items-center p-2 rounded-lg cursor-pointer transition-colors hover:bg-white/5"
-              style={{
-                backgroundColor: selectedPairs.includes(pair) ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
-                border: selectedPairs.includes(pair) ? '1px solid var(--color-hl-primary)' : '1px solid transparent'
-              }}
-            >
-              <input
-                type="checkbox"
-                className="tick"
-                checked={selectedPairs.includes(pair)}
-                onChange={() => handlePairToggle(pair)}
-              />
-              <div className="input-circle"></div>
-              <span 
-                className="text-sm truncate ml-2" 
-                style={{ color: 'var(--color-hl-text)' }}
-                title={pair}
+      {/* Кнопки управления */}
+      <div className="flex gap-2">
+        <button
+          onClick={handleSelectAll}
+          className="px-3 py-1 text-xs rounded-lg border hover:bg-white/5 transition"
+          style={{
+            borderColor: 'var(--color-hl-border)',
+            color: 'var(--color-hl-text)'
+          }}
+        >
+          All
+        </button>
+        <button
+          onClick={handleClear}
+          className="px-3 py-1 text-xs rounded-lg border hover:bg-white/5 transition"
+          style={{
+            borderColor: 'var(--color-hl-border)',
+            color: 'var(--color-hl-text)'
+          }}
+        >
+          Clear
+        </button>
+      </div>
+
+      {/* Список пар */}
+      <div className="pairs-scroll max-h-48 overflow-y-auto">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+          {filteredPairs.map((pair) => {
+            const isSelected = selectedPairs.includes(pair);
+            const maxLeverage = getMaxLeverage(pair);
+            
+            return (
+              <div
+                key={pair}
+                onClick={() => handlePairToggle(pair)}
+                className="flex items-center gap-2 p-2 rounded-lg border cursor-pointer hover:bg-white/5 transition"
+                style={{
+                  borderColor: isSelected ? 'var(--color-hl-primary)' : 'var(--color-hl-border)',
+                  backgroundColor: isSelected ? 'rgba(111, 255, 176, 0.1)' : 'transparent'
+                }}
               >
-                {pair}
-                {/* Максимальное плечо как текст через пробел */}
-                {getMaxLeverage(pair) && (
-                  <span 
-                    className="ml-1"
-                    style={{ color: 'var(--color-hl-success)' }}
-                  >
-                    {getMaxLeverage(pair)}x
-                  </span>
-                )}
-              </span>
-            </label>
-          ))}
+                {/* Чекбокс */}
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    className="tick sr-only"
+                    checked={isSelected}
+                    onChange={() => {}} // Обработчик уже в onClick родителя
+                  />
+                  <div className="input-circle" />
+                </div>
+                
+                {/* Текст пары */}
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm" style={{ color: 'var(--color-hl-text)' }}>
+                    {pair}
+                  </div>
+                  <div className="text-xs" style={{ color: 'var(--color-hl-muted)' }}>
+                    {maxLeverage}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
+
+      {/* Статистика выбора */}
+      {selectedPairs.length > 0 && (
+        <div className="text-xs" style={{ color: 'var(--color-hl-muted)' }}>
+          Selected: {selectedPairs.length} / {pairs.length} pairs
+        </div>
+      )}
     </div>
   );
 }
