@@ -8,20 +8,23 @@ export default function DebugMarkets() {
   useEffect(() => {
     (async () => {
       try {
-        const h = await fetch('/api/_health', { cache: 'no-store' });
-        const hj = await h.json();
-        setHealth(`ok=${hj.ok} ts=${hj.ts}`);
+        const h = await fetch('/api/health', { cache: 'no-store' });
+        const text = await h.text();
+        setHealth(`${h.status} ${h.ok ? 'OK' : 'ERR'} · ${text}`);
       } catch (e: unknown) {
         const errorMessage = e instanceof Error ? e.message : String(e);
-        setHealth('ERROR: ' + errorMessage);
+        setHealth('FETCH ERR: ' + errorMessage);
       }
+
       try {
         const r = await fetch('/api/hyperliquid/markets', { cache: 'no-store' });
-        const j = await r.json();
-        setMarkets(`perps=${Array.isArray(j?.perps) ? j.perps.length : 0} error=${j?.error ?? 'none'}`);
+        const j = await r.json().catch(async () => ({ raw: await r.text() }));
+        const count = Array.isArray(j?.perps) ? j.perps.length : 0;
+        const error = j?.error ?? 'none';
+        setMarkets(`${r.status} ${r.ok ? 'OK' : 'ERR'} · perps=${count} · error=${error}`);
       } catch (e: unknown) {
         const errorMessage = e instanceof Error ? e.message : String(e);
-        setMarkets('ERROR: ' + errorMessage);
+        setMarkets('FETCH ERR: ' + errorMessage);
       }
     })();
   }, []);
