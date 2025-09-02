@@ -13,12 +13,23 @@ export default function HeaderPrivy() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      if (!authenticated || !ready || !adapter) { setAddr(''); return; }
-      const a = await adapter.getAddress();
-      if (alive) setAddr(a);
+      try {
+        if (!authenticated || !ready || !adapter) { 
+          setAddr(''); 
+          return; 
+        }
+        const a = await adapter.getAddress();
+        if (alive) setAddr(a);
+      } catch (error) {
+        console.error('Error getting address:', error);
+        if (alive) setAddr('');
+      }
     })();
     return () => { alive = false; };
   }, [authenticated, ready, adapter]);
+
+  // Debug info
+  console.log('HeaderPrivy render:', { authenticated, ready, hasAdapter: !!adapter, addr });
 
   return (
     <header className="card p-4 flex items-center justify-between">
