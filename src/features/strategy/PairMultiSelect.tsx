@@ -98,9 +98,9 @@ export function PairMultiSelect({ pairs, metas }: PairMultiSelectProps) {
         </button>
       </div>
 
-      {/* Список пар */}
-      <div className="pairs-scroll max-h-32 overflow-y-auto">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+      {/* Список пар - увеличенное окно без горизонтальной прокрутки */}
+      <div className="pairs-scroll max-h-64 overflow-y-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
           {filteredPairs.map((pair) => {
             const isSelected = selectedPairs.includes(pair);
             const maxLeverage = getMaxLeverage(pair);
