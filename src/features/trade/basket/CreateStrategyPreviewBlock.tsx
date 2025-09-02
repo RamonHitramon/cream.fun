@@ -7,7 +7,7 @@ import { usePerpMetas } from '@/features/trade/hooks/usePerpMetas';
 export default function CreateStrategyPreviewBlock() {
   const metas = usePerpMetas();
   const [amount, setAmount] = useState<number>(1000);
-  const [selected] = useState<string[]>(['BTC','ETH']);
+  const [selected, setSelected] = useState<string[]>(['BTC','ETH']);
   const [side, setSide] = useState<'BUY'|'SELL'>('BUY');
   const [preview, setPreview] = useState<BasketPreview | null>(null);
 
@@ -61,7 +61,44 @@ export default function CreateStrategyPreviewBlock() {
         </div>
       </div>
 
-      <div className="text-sm text-hl-muted">Selected: {selected.join(', ')}</div>
+      <div className="space-y-2">
+        <div className="text-sm text-hl-muted">Selected pairs:</div>
+        <div className="flex flex-wrap gap-2">
+          {Object.keys(metas).slice(0, 10).map(symbol => (
+            <button
+              key={symbol}
+              onClick={() => {
+                if (selected.includes(symbol)) {
+                  setSelected(selected.filter(s => s !== symbol));
+                } else {
+                  setSelected([...selected, symbol]);
+                }
+              }}
+              className={`px-3 py-1 rounded-xl text-sm ${
+                selected.includes(symbol)
+                  ? 'bg-hl-success text-black'
+                  : 'bg-hl-surface border border-hl-border'
+              }`}
+            >
+              {symbol}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setSelected(Object.keys(metas).slice(0, 10))}
+            className="px-3 py-1 rounded-xl bg-hl-surface border border-hl-border text-sm"
+          >
+            Select All
+          </button>
+          <button
+            onClick={() => setSelected([])}
+            className="px-3 py-1 rounded-xl bg-hl-surface border border-hl-border text-sm"
+          >
+            Clear
+          </button>
+        </div>
+      </div>
 
       {preview && (
         <div className="space-y-3">
