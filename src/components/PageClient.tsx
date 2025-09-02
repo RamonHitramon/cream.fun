@@ -1,13 +1,12 @@
 'use client';
 
 import React from 'react';
-import { Card } from '@/features/ui/Card';
-import { Button } from '@/features/ui/Button';
 import { KPIPanel } from '@/features/ui/KPI';
 import { CreateStrategy } from '@/features/strategy/CreateStrategy';
 import { ActivePositions } from '@/features/positions/ActivePositions';
 import { useMarketData } from '@/components/MarketDataProvider';
 import { LoadingState } from '@/features/ui/LoadingState';
+import { TopBar } from '@/components/TopBar';
 
 const kpiData = [
   { title: 'Balance', value: '$0.00', color: 'default' as const },
@@ -25,7 +24,7 @@ const kpiData = [
 ];
 
 export function PageClient() {
-  const { markets, loading, error, refetch, lastUpdated } = useMarketData();
+  const { markets, loading, error, refetch } = useMarketData();
   const marketPairs = markets.map(market => market.display);
 
   // Update KPI data with real market count and refresh button
@@ -46,26 +45,10 @@ export function PageClient() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-hl-bg)' }}>
+      {/* TopBar */}
+      <TopBar />
+      
       <div className="container mx-auto px-4 py-6 max-w-7xl">
-        {/* TopBar */}
-        <Card className="mb-6">
-          <div className="flex items-center justify-between px-4 py-4 h-14">
-            <div className="text-xl font-bold" style={{ color: 'var(--color-hl-primary)' }}>
-              cream.fun
-            </div>
-            <div className="flex items-center gap-4">
-              {lastUpdated && (
-                <div className="text-sm" style={{ color: 'var(--color-hl-muted)' }}>
-                  Updated: {new Date(lastUpdated).toLocaleTimeString()}
-                </div>
-              )}
-              <Button variant="primary">
-                Connect
-              </Button>
-            </div>
-          </div>
-        </Card>
-
         {/* KPI Panel */}
         <KPIPanel data={updatedKpiData} />
 
