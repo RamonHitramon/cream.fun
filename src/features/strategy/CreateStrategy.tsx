@@ -5,6 +5,8 @@ import { LongBlock } from './LongBlock';
 import { ShortBlock } from './ShortBlock';
 import { useStrategyState } from '@/lib/hooks';
 
+import { PerpMarket } from '@/lib/hyperliquid/types';
+
 interface CreateStrategyProps {
   pairs: string[];
   markets?: PerpMarket[];
