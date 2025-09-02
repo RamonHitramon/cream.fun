@@ -32,10 +32,13 @@ export function PairMultiSelect({
   };
 
   const handleSelectAll = () => {
-    onSelectionChange(filteredPairs);
+    // Выбираем все отфильтрованные пары
+    const allFilteredPairs = [...new Set([...selectedPairs, ...filteredPairs])];
+    onSelectionChange(allFilteredPairs);
   };
 
   const handleClear = () => {
+    // Очищаем все выбранные пары
     onSelectionChange([]);
   };
 

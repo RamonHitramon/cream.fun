@@ -17,24 +17,16 @@ html, body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* КРУГЛЫЙ ЧЕКБОКС */
+/* Кастомный круглый чекбокс */
+input[type="checkbox"].tick {
+  @apply sr-only;
+}
 .input-circle {
   @apply relative inline-flex h-5 w-5 items-center justify-center rounded-full border border-hl-border bg-hl-surface transition;
 }
 .input-circle::after {
   content: "";
-  @apply h-2.5 w-2.5 rounded-full opacity-0 transition;
-  background: theme(colors.hl.success);
-}
-input[type="checkbox"].tick {
-  @apply sr-only; /* скрываем системный чекбокс, управляем через label */
-}
-input[type="checkbox"].tick:focus-visible + .input-circle {
-  @apply ring-2 ring-hl-primary ring-offset-2 ring-offset-hl-bg;
-}
-input[type="checkbox"].tick:checked + .input-circle {
-  @apply border-transparent;
-  background: rgba(111, 255, 176, 0.15); /* success с альфой */
+  @apply h-2.5 w-2.5 rounded-full bg-hl-success opacity-0 transition;
 }
 input[type="checkbox"].tick:checked + .input-circle::after {
   @apply opacity-100;
