@@ -12,7 +12,7 @@ export default function HomePage() {
     <MarketDataProvider>
       <PageClient />
       <div className="max-w-6xl mx-auto p-6 space-y-6">
-        <CreateStrategyPreviewBlock />
+        <CreateStrategyPreviewBlock selectedSymbols={[]} />
       </div>
     </MarketDataProvider>
   );

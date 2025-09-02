@@ -4,10 +4,9 @@ import { previewBasket } from '@/features/trade/basket/preview';
 import type { BasketInput, BasketPreview } from '@/features/trade/basket/types';
 import { usePerpMetas } from '@/features/trade/hl/usePerpMetas';
 
-export default function CreateStrategyPreviewBlock() {
+export default function CreateStrategyPreviewBlock({ selectedSymbols }: { selectedSymbols: string[] }) {
   const { metas, isLoading, error } = usePerpMetas();
   const [amount, setAmount] = useState<number>(1000);
-  const [selected, setSelected] = useState<string[]>(['BTC','ETH']);
   const [side, setSide] = useState<'BUY'|'SELL'>('BUY');
   const [preview, setPreview] = useState<BasketPreview | null>(null);
 
@@ -20,7 +19,7 @@ export default function CreateStrategyPreviewBlock() {
       orderType: 'market',
       side,
       totalUsd: amount,
-      symbols: selected,
+      symbols: selectedSymbols,
     };
     const pv = previewBasket(input, metas);
     setPreview(pv);
@@ -64,42 +63,10 @@ export default function CreateStrategyPreviewBlock() {
       </div>
 
       <div className="space-y-2">
-        <div className="text-sm text-hl-muted">Selected pairs:</div>
-        <div className="flex flex-wrap gap-2">
-          {Object.keys(metas).slice(0, 10).map(symbol => (
-            <button
-              key={symbol}
-              onClick={() => {
-                if (selected.includes(symbol)) {
-                  setSelected(selected.filter(s => s !== symbol));
-                } else {
-                  setSelected([...selected, symbol]);
-                }
-              }}
-              className={`px-3 py-1 rounded-xl text-sm ${
-                selected.includes(symbol)
-                  ? 'bg-hl-success text-black'
-                  : 'bg-hl-surface border border-hl-border'
-              }`}
-            >
-              {symbol}
-            </button>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setSelected(Object.keys(metas).slice(0, 10))}
-            className="px-3 py-1 rounded-xl bg-hl-surface border border-hl-border text-sm"
-          >
-            Select All
-          </button>
-          <button
-            onClick={() => setSelected([])}
-            className="px-3 py-1 rounded-xl bg-hl-surface border border-hl-border text-sm"
-          >
-            Clear
-          </button>
-        </div>
+        <div className="text-sm text-hl-muted">Selected pairs: {selectedSymbols.join(', ')}</div>
+        {selectedSymbols.length === 0 && (
+          <div className="text-sm text-hl-muted italic">No pairs selected. Please select pairs from the strategy form above.</div>
+        )}
       </div>
 
       {preview && (
