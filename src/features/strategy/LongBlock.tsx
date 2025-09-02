@@ -32,8 +32,7 @@ export function LongBlock({
 
   return (
     <Card className="p-6">
-      <h3 className="text-lg font-semibold mb-4 flex items-center" style={{ color: 'var(--color-hl-success)' }}>
-        <span className="mr-2">📈</span>
+      <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-hl-success)' }}>
         Long Positions
       </h3>
       
@@ -111,12 +110,7 @@ export function LongBlock({
             step="0.01"
             value={slippage}
             onChange={(e) => onSlippageChange(parseFloat(e.target.value))}
-            className="w-full h-2 rounded-lg appearance-none cursor-pointer"
-            style={{ 
-              backgroundColor: 'var(--color-hl-success)',
-              // Кастомные стили для slider - фон как у кнопки ALL, бегунок ярко-зеленый
-              background: `linear-gradient(to right, var(--color-hl-success) 0%, var(--color-hl-success) ${(slippage - 0.01) / (1 - 0.01) * 100}%, var(--color-hl-success) ${(slippage - 0.01) / (1 - 0.01) * 100}%, var(--color-hl-success) 100%)`
-            }}
+            className="w-full h-2 rounded-lg hl-range cursor-pointer"
           />
           <div className="text-xs mt-1" style={{ color: 'var(--color-hl-muted)' }}>Max: 0.10%</div>
         </div>

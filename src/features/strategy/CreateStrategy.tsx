@@ -35,8 +35,7 @@ export function CreateStrategy({ pairs, markets = [] }: CreateStrategyProps) {
     <Card className="p-6">
       {/* Header */}
       <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-2 flex items-center" style={{ color: 'var(--color-hl-success)' }}>
-          <span className="mr-2">✅</span>
+        <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--color-hl-success)' }}>
           Create Strategy
         </h2>
         <div className="px-3 py-2 rounded-lg text-sm" style={{ backgroundColor: 'rgba(111, 255, 176, 0.2)', color: 'var(--color-hl-success)' }}>

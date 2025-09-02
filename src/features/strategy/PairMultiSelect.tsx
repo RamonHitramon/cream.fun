@@ -66,32 +66,26 @@ export function PairMultiSelect({
         <Button variant="danger" onClick={handleClear}>Clear</Button>
       </div>
 
-      <div className="max-h-48 overflow-y-auto">
+      <div className="max-h-48 overflow-y-auto pairs-scroll">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
           {filteredPairs.map((pair) => (
-            <div
+            <label
               key={pair}
               className="flex items-center p-2 rounded-lg cursor-pointer transition-colors hover:bg-white/5"
               style={{
                 backgroundColor: selectedPairs.includes(pair) ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
                 border: selectedPairs.includes(pair) ? '1px solid var(--color-hl-primary)' : '1px solid transparent'
               }}
-              onClick={() => handlePairToggle(pair)}
             >
               <input
                 type="checkbox"
+                className="tick"
                 checked={selectedPairs.includes(pair)}
                 onChange={() => handlePairToggle(pair)}
-                className="mr-2 w-4 h-4 rounded-full"
-                style={{
-                  accentColor: 'var(--color-hl-success)',
-                  backgroundColor: selectedPairs.includes(pair) ? 'var(--color-hl-success)' : 'transparent',
-                  border: '2px solid var(--color-hl-success)'
-                }}
-                onClick={(e) => e.stopPropagation()}
               />
+              <div className="input-circle"></div>
               <span 
-                className="text-sm truncate" 
+                className="text-sm truncate ml-2" 
                 style={{ color: 'var(--color-hl-text)' }}
                 title={pair}
               >
@@ -106,7 +100,7 @@ export function PairMultiSelect({
                   </span>
                 )}
               </span>
-            </div>
+            </label>
           ))}
         </div>
       </div>
