@@ -6,10 +6,11 @@ export interface PairMultiSelectProps {
   pairs: string[];
   markets: PerpMarket[];
   metas: PerpMetaMap;
+  selectedPairs: string[];
+  onPairsChange: (pairs: string[]) => void;
 }
 
-export function PairMultiSelect({ pairs, metas }: PairMultiSelectProps) {
-  const [selectedPairs, setSelectedPairs] = useState<string[]>([]);
+export function PairMultiSelect({ pairs, metas, selectedPairs, onPairsChange }: PairMultiSelectProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Фильтруем пары по поиску
@@ -22,29 +23,26 @@ export function PairMultiSelect({ pairs, metas }: PairMultiSelectProps) {
 
   // Обработчик выбора/отмены пары
   const handlePairToggle = (pair: string) => {
-    setSelectedPairs(prev => 
-      prev.includes(pair) 
-        ? prev.filter(p => p !== pair)
-        : [...prev, pair]
-    );
+    const newSelected = selectedPairs.includes(pair) 
+      ? selectedPairs.filter(p => p !== pair)
+      : [...selectedPairs, pair];
+    onPairsChange(newSelected);
   };
 
   // Выбрать все отфильтрованные пары
   const handleSelectAll = () => {
-    setSelectedPairs(prev => {
-      const newSelected = [...prev];
-      filteredPairs.forEach(pair => {
-        if (!newSelected.includes(pair)) {
-          newSelected.push(pair);
-        }
-      });
-      return newSelected;
+    const newSelected = [...selectedPairs];
+    filteredPairs.forEach(pair => {
+      if (!newSelected.includes(pair)) {
+        newSelected.push(pair);
+      }
     });
+    onPairsChange(newSelected);
   };
 
   // Очистить все выбранные пары
   const handleClear = () => {
-    setSelectedPairs([]);
+    onPairsChange([]);
   };
 
   // Получить maxLeverage для пары

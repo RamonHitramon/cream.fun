@@ -14,7 +14,7 @@
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "swr": "^2.3.6",
-    "viem": "^2.37.0",
+    "viem": "^2.37.1",
     "wagmi": "^2.16.9"
   },
   "devDependencies": {

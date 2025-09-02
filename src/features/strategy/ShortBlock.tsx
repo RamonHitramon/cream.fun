@@ -8,9 +8,11 @@ export interface ShortBlockProps {
   pairs: string[];
   markets: PerpMarket[];
   metas: PerpMetaMap;
+  selectedPairs: string[];
+  onPairsChange: (pairs: string[]) => void;
 }
 
-export function ShortBlock({ pairs, markets, metas }: ShortBlockProps) {
+export function ShortBlock({ pairs, markets, metas, selectedPairs, onPairsChange }: ShortBlockProps) {
   return (
     <Card>
       <div className="p-3">
@@ -24,7 +26,13 @@ export function ShortBlock({ pairs, markets, metas }: ShortBlockProps) {
             <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-hl-text)' }}>
               Select Pairs
             </label>
-            <PairMultiSelect pairs={pairs} markets={markets} metas={metas} />
+            <PairMultiSelect 
+              pairs={pairs} 
+              markets={markets} 
+              metas={metas}
+              selectedPairs={selectedPairs}
+              onPairsChange={onPairsChange}
+            />
           </div>
           
           {/* USD Amount */}

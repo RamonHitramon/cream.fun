@@ -24,7 +24,11 @@ const kpiData = [
   }
 ];
 
-export function PageClient() {
+interface PageClientProps {
+  onSymbolsChange: (symbols: string[]) => void;
+}
+
+export function PageClient({ onSymbolsChange }: PageClientProps) {
   const { markets, loading, error, refetch } = useMarketData();
   const { metas } = usePerpMetas(); // Получаем метаданные перпов
   
@@ -65,7 +69,12 @@ export function PageClient() {
           <div className="grid grid-cols-1 xl:grid-cols-[minmax(680px,1fr)_minmax(460px,0.8fr)] gap-6">
             {/* Left Column - Create Strategy */}
             <div>
-              <CreateStrategy pairs={marketPairs} markets={markets} metas={metas} />
+              <CreateStrategy 
+                pairs={marketPairs} 
+                markets={markets} 
+                metas={metas}
+                onSymbolsChange={onSymbolsChange}
+              />
             </div>
 
             {/* Right Column - Active Positions */}

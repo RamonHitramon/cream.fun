@@ -1,4 +1,6 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import { MarketDataProvider } from '@/components/MarketDataProvider';
 import { PageClient } from '@/components/PageClient';
 import dynamic from 'next/dynamic';
@@ -8,11 +10,13 @@ const CreateStrategyPreviewBlock = dynamic(
 );
 
 export default function HomePage() {
+  const [selectedSymbols, setSelectedSymbols] = useState<string[]>([]);
+  
   return (
     <MarketDataProvider>
-      <PageClient />
+      <PageClient onSymbolsChange={setSelectedSymbols} />
       <div className="max-w-6xl mx-auto p-6 space-y-6">
-        <CreateStrategyPreviewBlock selectedSymbols={[]} />
+        <CreateStrategyPreviewBlock selectedSymbols={selectedSymbols} />
       </div>
     </MarketDataProvider>
   );

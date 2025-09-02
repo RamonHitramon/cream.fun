@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '@/features/ui/Card';
 import { Button } from '@/features/ui/Button';
 import { LongBlock } from './LongBlock';
@@ -10,9 +10,16 @@ export interface CreateStrategyProps {
   pairs: string[];
   markets: PerpMarket[];
   metas: PerpMetaMap;
+  onSymbolsChange: (symbols: string[]) => void;
 }
 
 export function CreateStrategy({ pairs, markets, metas }: CreateStrategyProps) {
+  const [selectedLongPairs, setSelectedLongPairs] = useState<string[]>([]);
+  const [selectedShortPairs, setSelectedShortPairs] = useState<string[]>([]);
+  
+  // Объединяем все выбранные пары для превью
+  const allSelectedPairs = [...selectedLongPairs, ...selectedShortPairs];
+  
   return (
     <Card>
       <div className="p-6">
@@ -21,8 +28,20 @@ export function CreateStrategy({ pairs, markets, metas }: CreateStrategyProps) {
         </h2>
         
         <div className="space-y-6">
-          <LongBlock pairs={pairs} markets={markets} metas={metas} />
-          <ShortBlock pairs={pairs} markets={markets} metas={metas} />
+          <LongBlock 
+            pairs={pairs} 
+            markets={markets} 
+            metas={metas}
+            selectedPairs={selectedLongPairs}
+            onPairsChange={setSelectedLongPairs}
+          />
+          <ShortBlock 
+            pairs={pairs} 
+            markets={markets} 
+            metas={metas}
+            selectedPairs={selectedShortPairs}
+            onPairsChange={setSelectedShortPairs}
+          />
           
           {/* Slippage и кнопки стратегии */}
           <div className="pt-4" style={{ borderTop: '1px solid var(--color-hl-border)' }}>
