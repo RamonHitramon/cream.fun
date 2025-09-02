@@ -3,8 +3,8 @@ import "./globals.css";
 import { PrivyProvider } from '@/components/PrivyProvider';
 
 export const metadata: Metadata = {
-  title: "cream.fun",
-  description: "Cream.fun - Advanced Trading Platform",
+  title: 'cream.fun',
+  description: 'Hyperliquid basket trading UI',
 };
 
 export default function RootLayout({
@@ -14,11 +14,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">
+      <body className="min-h-screen bg-hl-bg text-white">
         <PrivyProvider>
-          <div className="min-h-screen bg-hl-bg">
-            {children}
-          </div>
+          {children}
         </PrivyProvider>
       </body>
     </html>

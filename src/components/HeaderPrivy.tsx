@@ -31,7 +31,7 @@ export default function HeaderPrivy() {
   // Debug info
   console.log('HeaderPrivy render:', { authenticated, ready, hasAdapter: !!adapter, addr });
 
-  return (
+    return (
     <header className="card p-4 flex items-center justify-between">
       <div className="text-xl font-bold">cream.fun</div>
 
@@ -40,16 +40,16 @@ export default function HeaderPrivy() {
           {authenticated && addr ? `Connected: ${addr.slice(0,6)}…${addr.slice(-4)}` : 'Wallet: not connected'}
         </div>
         {authenticated ? (
-          <button 
+          <button
             onClick={() => logout()}
-            className="px-3 py-1 rounded-xl bg-hl-surface border border-hl-border hover:bg-white/5 text-sm"
+            className="btn bg-hl-surface border border-hl-border hover:bg-white/5"
           >
             Disconnect
           </button>
         ) : (
-          <button 
+          <button
             onClick={() => login()}
-            className="px-3 py-1 rounded-xl bg-hl-success text-black text-sm"
+            className="btn-success"
           >
             Connect Wallet
           </button>

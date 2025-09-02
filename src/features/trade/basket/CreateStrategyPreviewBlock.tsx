@@ -39,7 +39,7 @@ export default function CreateStrategyPreviewBlock() {
             type="number"
             value={amount}
             onChange={(e)=>setAmount(Number(e.target.value || 0))}
-            className="w-full rounded-xl bg-hl-surface border border-hl-border p-2"
+            className="input"
             min={0}
           />
         </div>
@@ -47,13 +47,13 @@ export default function CreateStrategyPreviewBlock() {
           <label className="text-sm text-hl-muted">Side</label>
           <div className="flex gap-2 mt-1">
             <button
-              className={`px-3 py-1 rounded-xl ${side==='BUY'?'bg-hl-success text-black':'bg-hl-surface border border-hl-border'}`}
+              className={`btn ${side==='BUY'?'btn-success':'bg-hl-surface border border-hl-border'}`}
               onClick={()=>setSide('BUY')}
             >
               Long (BUY)
             </button>
             <button
-              className={`px-3 py-1 rounded-xl ${side==='SELL'?'bg-hl-danger text-white':'bg-hl-surface border border-hl-border'}`}
+              className={`btn ${side==='SELL'?'btn-danger':'bg-hl-surface border border-hl-border'}`}
               onClick={()=>setSide('SELL')}
             >
               Short (SELL)

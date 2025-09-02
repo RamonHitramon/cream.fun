@@ -30,10 +30,12 @@ export default function DebugMarkets() {
   }, []);
 
   return (
-    <div className="text-xs text-hl-muted rounded-xl border border-hl-border bg-hl-surface p-3">
-      <div className="font-semibold mb-1">Debug</div>
-      <div>health: {health}</div>
-      <div>markets: {markets}</div>
+    <div className="card p-3">
+      <div className="text-xs text-hl-muted">
+        <div className="font-semibold mb-1">Debug</div>
+        <div>health: {health}</div>
+        <div>markets: {markets}</div>
+      </div>
     </div>
   );
 }
