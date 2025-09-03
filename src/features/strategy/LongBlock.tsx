@@ -8,10 +8,9 @@ import { HyperliquidAsset } from '@/lib/hyperliquid/types';
 export interface LongBlockProps {
   pairs: string[];
   markets: HyperliquidAsset[];
-  metas: Record<string, any>; // Keep for backward compatibility
 }
 
-export function LongBlock({ pairs, markets, metas }: LongBlockProps) {
+export function LongBlock({ pairs, markets }: LongBlockProps) {
   return (
     <Card>
       <div className="p-3">
@@ -42,7 +41,7 @@ export function LongBlock({ pairs, markets, metas }: LongBlockProps) {
             <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-hl-text)' }}>
               Select Pairs
             </label>
-            <PairMultiSelect pairs={pairs} markets={markets} metas={metas} />
+            <PairMultiSelect pairs={pairs} markets={markets} />
           </div>
         </div>
       </div>

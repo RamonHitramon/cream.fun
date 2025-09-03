@@ -6,10 +6,9 @@ import { HyperliquidAsset } from '@/lib/hyperliquid/types';
 export interface PairMultiSelectProps {
   pairs: string[];
   markets: HyperliquidAsset[];
-  metas: Record<string, any>; // Keep for backward compatibility
 }
 
-export function PairMultiSelect({ pairs, markets, metas }: PairMultiSelectProps) {
+export function PairMultiSelect({ pairs, markets }: PairMultiSelectProps) {
   const [selectedPairs, setSelectedPairs] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 

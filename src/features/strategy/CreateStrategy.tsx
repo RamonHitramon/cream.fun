@@ -9,10 +9,9 @@ import { HyperliquidAsset } from '@/lib/hyperliquid/types';
 export interface CreateStrategyProps {
   pairs: string[];
   markets: HyperliquidAsset[];
-  metas: Record<string, any>; // Keep for backward compatibility
 }
 
-export function CreateStrategy({ pairs, markets, metas }: CreateStrategyProps) {
+export function CreateStrategy({ pairs, markets }: CreateStrategyProps) {
   return (
     <Card>
       <div className="p-6">
@@ -21,8 +20,8 @@ export function CreateStrategy({ pairs, markets, metas }: CreateStrategyProps) {
         </h2>
         
         <div className="space-y-6">
-          <LongBlock pairs={pairs} markets={markets} metas={metas} />
-          <ShortBlock pairs={pairs} markets={markets} metas={metas} />
+          <LongBlock pairs={pairs} markets={markets} />
+          <ShortBlock pairs={pairs} markets={markets} />
         </div>
       </div>
     </Card>

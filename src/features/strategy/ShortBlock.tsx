@@ -8,10 +8,9 @@ import { HyperliquidAsset } from '@/lib/hyperliquid/types';
 export interface ShortBlockProps {
   pairs: string[];
   markets: HyperliquidAsset[];
-  metas: Record<string, any>; // Keep for backward compatibility
 }
 
-export function ShortBlock({ pairs, markets, metas }: ShortBlockProps) {
+export function ShortBlock({ pairs, markets }: ShortBlockProps) {
   return (
     <Card>
       <div className="p-3">
@@ -42,7 +41,7 @@ export function ShortBlock({ pairs, markets, metas }: ShortBlockProps) {
             <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-hl-text)' }}>
               Select Pairs
             </label>
-            <PairMultiSelect pairs={pairs} markets={markets} metas={metas} />
+            <PairMultiSelect pairs={pairs} markets={markets} />
           </div>
         </div>
       </div>

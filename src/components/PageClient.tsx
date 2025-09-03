@@ -73,7 +73,7 @@ export function PageClient() {
         <LoadingState loading={loading} error={error} onRetry={refetch}>
           <div className="grid grid-cols-1 xl:grid-cols-[minmax(680px,1fr)_minmax(460px,0.8fr)] gap-6">
             <div className="space-y-6">
-              <CreateStrategy pairs={marketPairs} markets={markets} metas={{}} />
+              <CreateStrategy pairs={marketPairs} markets={markets} />
               <ActionButtons />
             </div>
 
