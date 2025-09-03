@@ -57,7 +57,7 @@ export function PairMultiSelect({ pairs, metas }: PairMultiSelectProps) {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {/* Поиск */}
       <div>
         <input
@@ -99,7 +99,7 @@ export function PairMultiSelect({ pairs, metas }: PairMultiSelectProps) {
       </div>
 
       {/* Список пар */}
-      <div className="pairs-scroll max-h-48 overflow-y-auto">
+      <div className="pairs-scroll max-h-32 overflow-y-auto">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
           {filteredPairs.map((pair) => {
             const isSelected = selectedPairs.includes(pair);
@@ -126,13 +126,15 @@ export function PairMultiSelect({ pairs, metas }: PairMultiSelectProps) {
                   <div className="input-circle" />
                 </div>
                 
-                {/* Текст пары */}
+                {/* Текст пары и размер плеча в одну строку */}
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-sm" style={{ color: 'var(--color-hl-text)' }}>
-                    {pair}
-                  </div>
-                  <div className="text-xs" style={{ color: 'var(--color-hl-muted)' }}>
-                    {maxLeverage}
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm" style={{ color: 'var(--color-hl-text)' }}>
+                      {pair}
+                    </span>
+                    <span className="text-xs" style={{ color: 'var(--color-hl-muted)' }}>
+                      {maxLeverage}
+                    </span>
                   </div>
                 </div>
               </div>

@@ -13,15 +13,15 @@ export interface ShortBlockProps {
 export function ShortBlock({ pairs, markets, metas }: ShortBlockProps) {
   return (
     <Card>
-      <div className="p-4">
-        <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-hl-danger)' }}>
+      <div className="p-3">
+        <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--color-hl-danger)' }}>
           Short Positions
         </h3>
         
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Pair Selection */}
           <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-hl-text)' }}>
+            <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-hl-text)' }}>
               Select Pairs
             </label>
             <PairMultiSelect pairs={pairs} markets={markets} metas={metas} />
@@ -29,7 +29,7 @@ export function ShortBlock({ pairs, markets, metas }: ShortBlockProps) {
           
           {/* USD Amount */}
           <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-hl-text)' }}>
+            <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-hl-text)' }}>
               USD Amount
             </label>
             <input
@@ -46,7 +46,7 @@ export function ShortBlock({ pairs, markets, metas }: ShortBlockProps) {
           
           {/* Leverage */}
           <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-hl-text)' }}>
+            <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-hl-text)' }}>
               Leverage
             </label>
             <input
@@ -59,26 +59,6 @@ export function ShortBlock({ pairs, markets, metas }: ShortBlockProps) {
                 color: 'var(--color-hl-text)'
               }}
             />
-          </div>
-          
-          {/* Slippage */}
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-hl-text)' }}>
-              Slippage (%)
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="10"
-              step="0.1"
-              defaultValue="1"
-              className="hl-range w-full"
-            />
-            <div className="flex justify-between text-xs mt-1" style={{ color: 'var(--color-hl-muted)' }}>
-              <span>0%</span>
-              <span>1%</span>
-              <span>10%</span>
-            </div>
           </div>
         </div>
       </div>
