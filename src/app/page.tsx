@@ -9,3 +9,5 @@ export default function HomePage() {
     </MarketDataProvider>
   );
 }
+
+// Force Vercel redeploy - UI improvements applied

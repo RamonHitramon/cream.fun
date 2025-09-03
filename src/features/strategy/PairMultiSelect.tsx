@@ -56,6 +56,14 @@ export function PairMultiSelect({ pairs, metas }: PairMultiSelectProps) {
     return 'N/A';
   };
 
+  // Обрезать длинные тикеры
+  const truncateTicker = (ticker: string): string => {
+    if (ticker.length > 8) {
+      return ticker.slice(0, 8) + '...';
+    }
+    return ticker;
+  };
+
   return (
     <div className="space-y-2">
       {/* Поиск */}
@@ -99,11 +107,12 @@ export function PairMultiSelect({ pairs, metas }: PairMultiSelectProps) {
       </div>
 
       {/* Список пар */}
-      <div className="pairs-scroll max-h-32 overflow-y-auto">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+      <div className="pairs-scroll max-h-48 overflow-y-auto">
+        <div className="grid grid-cols-3 gap-2">
           {filteredPairs.map((pair) => {
             const isSelected = selectedPairs.includes(pair);
             const maxLeverage = getMaxLeverage(pair);
+            const displayTicker = truncateTicker(pair);
             
             return (
               <div
@@ -114,6 +123,7 @@ export function PairMultiSelect({ pairs, metas }: PairMultiSelectProps) {
                   borderColor: isSelected ? 'var(--color-hl-primary)' : 'var(--color-hl-border)',
                   backgroundColor: isSelected ? 'rgba(111, 255, 176, 0.1)' : 'transparent'
                 }}
+                title={pair} // Показываем полное название при наведении
               >
                 {/* Чекбокс */}
                 <div className="flex items-center">
@@ -130,7 +140,7 @@ export function PairMultiSelect({ pairs, metas }: PairMultiSelectProps) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm" style={{ color: 'var(--color-hl-text)' }}>
-                      {pair}
+                      {displayTicker}
                     </span>
                     <span className="text-xs" style={{ color: 'var(--color-hl-muted)' }}>
                       {maxLeverage}
