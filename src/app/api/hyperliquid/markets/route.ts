@@ -52,7 +52,7 @@ export async function GET() {
     
     try {
       jsonData = JSON.parse(responseText);
-    } catch (parseError) {
+    } catch {
       console.error('HL_UPSTREAM_BAD_JSON', upstream, responseText.slice(0, 500));
       return Response.json({ 
         perps: [], 

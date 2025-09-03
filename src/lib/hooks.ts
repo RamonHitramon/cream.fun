@@ -1,5 +1,6 @@
-import { useCallback, useState } from 'react';
-import { HyperliquidAsset } from './hyperliquid/types';
+'use client';
+
+import { useState, useCallback } from 'react';
 
 /**
  * Хук для работы с выбранными рынками
