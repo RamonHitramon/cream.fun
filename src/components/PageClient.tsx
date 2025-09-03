@@ -9,6 +9,7 @@ import { OrderHistory } from '@/features/orders/OrderHistory';
 import { useMarketData } from '@/components/MarketDataProvider';
 import { LoadingState } from '@/features/ui/LoadingState';
 import { TopBar } from '@/components/TopBar';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { HyperliquidAsset } from '@/lib/hyperliquid/types';
 
 const kpiData = [
