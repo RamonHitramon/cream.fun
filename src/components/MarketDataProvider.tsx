@@ -7,9 +7,12 @@ interface MarketDataContextType {
   markets: HyperliquidAsset[];
   loading: boolean;
   error: string | null;
-  refetch: () => void;
   lastUpdated: Date | null;
-  isFallback: boolean;
+  source: 'upstream' | 'error' | null;
+  upstreamStatus?: {
+    url: string;
+    status: number;
+  };
 }
 
 const MarketDataContext = createContext<MarketDataContextType | undefined>(undefined);
@@ -31,44 +34,28 @@ export function MarketDataProvider({ children }: MarketDataProviderProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [isFallback, setIsFallback] = useState(false);
+  const [source, setSource] = useState<'upstream' | 'error' | null>(null);
+  const [upstreamStatus, setUpstreamStatus] = useState<{ url: string; status: number } | undefined>();
 
   const fetchMarkets = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      console.log('Fetching markets from API...');
-      const response = await fetch('/api/hyperliquid/markets');
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
+      const response = await fetch('/api/hyperliquid/markets', { cache: 'no-store' });
       const data: HyperliquidResponse = await response.json();
-      console.log('Markets API response:', data);
       
-      if (data.perps && data.perps.length > 0) {
-        setMarkets(data.perps);
-        setIsFallback(data.fallback || false);
-        setLastUpdated(new Date());
-        
-        if (data.fallback) {
-          console.log('Using fallback data, upstream unavailable');
-        } else {
-          console.log(`Successfully loaded ${data.perps.length} real markets`);
-        }
-      } else {
-        throw new Error('No markets data received');
+      setMarkets(data.perps);
+      setSource(data.source);
+      setUpstreamStatus(data.upstreamStatus);
+      setLastUpdated(new Date());
+      
+      if (data.error) {
+        setError(data.error);
       }
-      
     } catch (err) {
-      console.error('Error fetching markets:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch markets');
-      
-      // Fallback to empty array to prevent UI crash
-      setMarkets([]);
-      setIsFallback(true);
+      setSource('error');
     } finally {
       setLoading(false);
     }
@@ -83,17 +70,13 @@ export function MarketDataProvider({ children }: MarketDataProviderProps) {
     return () => clearInterval(interval);
   }, []);
 
-  const refetch = () => {
-    fetchMarkets();
-  };
-
   const value: MarketDataContextType = {
     markets,
     loading,
     error,
-    refetch,
     lastUpdated,
-    isFallback
+    source,
+    upstreamStatus,
   };
 
   return (

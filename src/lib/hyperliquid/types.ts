@@ -7,6 +7,10 @@ export interface HyperliquidAsset {
 
 export interface HyperliquidResponse {
   perps: HyperliquidAsset[];
-  error?: string;
-  fallback?: boolean;
+  source: 'upstream' | 'error';
+  upstreamStatus?: {
+    url: string;
+    status: number;
+  };
+  error: string | null;
 }
