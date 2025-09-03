@@ -4,6 +4,8 @@ import React from 'react';
 import { KPIPanel } from '@/features/ui/KPI';
 import { CreateStrategy } from '@/features/strategy/CreateStrategy';
 import { ActivePositions } from '@/features/positions/ActivePositions';
+import { ActionButtons } from '@/features/strategy/ActionButtons';
+import { OrderHistory } from '@/features/orders/OrderHistory';
 import { useMarketData } from '@/components/MarketDataProvider';
 import { usePerpMetas } from '@/features/trade/hooks/usePerpMetas';
 import { LoadingState } from '@/features/ui/LoadingState';
@@ -16,9 +18,9 @@ const kpiData = [
   { title: 'Total PnL', value: '$0.00', color: 'default' as const },
   { title: 'Long PnL', value: '$0.00', color: 'success' as const },
   { title: 'Short PnL', value: '$0.00', color: 'danger' as const },
-  { 
-    title: 'Refresh', 
-    value: '🔄', 
+  {
+    title: 'Refresh',
+    value: '🔄',
     color: 'default' as const,
     onClick: () => console.log('Refresh clicked')
   }
@@ -26,13 +28,12 @@ const kpiData = [
 
 export function PageClient() {
   const { markets, loading, error, refetch } = useMarketData();
-  const metas = usePerpMetas(); // Получаем метаданные перпов
-  
+  const metas = usePerpMetas();
+
   const marketPairs = markets.map(market => market.display);
 
-  // Update KPI data with real market count and refresh button
   const updatedKpiData = [
-    ...kpiData.slice(0, -1), // Remove original refresh button
+    ...kpiData.slice(0, -1),
     {
       title: 'Markets',
       value: markets.length.toString(),
@@ -46,31 +47,27 @@ export function PageClient() {
     }
   ];
 
-  // Логируем метаданные для отладки
   console.log('Markets:', markets);
   console.log('Perp Metas:', metas);
   console.log('Market Pairs:', marketPairs);
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-hl-bg)' }}>
-      {/* TopBar */}
       <TopBar />
-      
+
       <div className="container mx-auto px-4 py-6 max-w-7xl">
-        {/* KPI Panel */}
         <KPIPanel data={updatedKpiData} />
 
-        {/* Main Content Grid wrapped in LoadingState */}
         <LoadingState loading={loading} error={error} onRetry={refetch}>
           <div className="grid grid-cols-1 xl:grid-cols-[minmax(680px,1fr)_minmax(460px,0.8fr)] gap-6">
-            {/* Left Column - Create Strategy */}
-            <div>
+            <div className="space-y-6">
               <CreateStrategy pairs={marketPairs} markets={markets} metas={metas} />
+              <ActionButtons />
             </div>
 
-            {/* Right Column - Active Positions */}
-            <div>
+            <div className="space-y-6">
               <ActivePositions />
+              <OrderHistory />
             </div>
           </div>
         </LoadingState>
