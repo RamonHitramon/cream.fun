@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { Card } from '@/features/ui/Card';
 import { PairMultiSelect } from './PairMultiSelect';
@@ -6,9 +8,24 @@ import { HyperliquidAsset } from '@/lib/hyperliquid/types';
 export interface ShortBlockProps {
   pairs: string[];
   markets: HyperliquidAsset[];
+  selectedPairs: string[];
+  onSelectionChange: (selected: string[]) => void;
+  usdAmount: string;
+  onUsdAmountChange: (amount: string) => void;
+  onCalculate: () => void;
+  loading?: boolean;
 }
 
-export function ShortBlock({ pairs, markets }: ShortBlockProps) {
+export function ShortBlock({ 
+  pairs, 
+  markets, 
+  selectedPairs, 
+  onSelectionChange, 
+  usdAmount, 
+  onUsdAmountChange,
+  onCalculate,
+  loading = false
+}: ShortBlockProps) {
   return (
     <Card>
       <div className="p-3">
@@ -25,6 +42,8 @@ export function ShortBlock({ pairs, markets }: ShortBlockProps) {
             <input
               type="number"
               placeholder="1000"
+              value={usdAmount}
+              onChange={(e) => onUsdAmountChange(e.target.value)}
               className="w-full px-3 py-2 rounded-lg border"
               style={{
                 backgroundColor: 'var(--color-hl-surface)',
@@ -39,8 +58,26 @@ export function ShortBlock({ pairs, markets }: ShortBlockProps) {
             <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-hl-text)' }}>
               Select Pairs
             </label>
-            <PairMultiSelect pairs={pairs} markets={markets} />
+            <PairMultiSelect 
+              pairs={pairs} 
+              markets={markets} 
+              selectedPairs={selectedPairs}
+              onSelectionChange={onSelectionChange}
+            />
           </div>
+
+          {/* Calculate Button */}
+          <button
+            onClick={onCalculate}
+            disabled={loading || selectedPairs.length === 0 || !usdAmount}
+            className="w-full px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: 'var(--color-hl-danger)',
+              color: 'white'
+            }}
+          >
+            {loading ? 'Calculating...' : 'Calculate Strategy'}
+          </button>
         </div>
       </div>
     </Card>

@@ -6,10 +6,11 @@ import { HyperliquidAsset } from '@/lib/hyperliquid/types';
 export interface PairMultiSelectProps {
   pairs: string[];
   markets: HyperliquidAsset[];
+  selectedPairs: string[];
+  onSelectionChange: (selected: string[]) => void;
 }
 
-export function PairMultiSelect({ pairs, markets }: PairMultiSelectProps) {
-  const [selectedPairs, setSelectedPairs] = useState<string[]>([]);
+export function PairMultiSelect({ pairs, markets, selectedPairs, onSelectionChange }: PairMultiSelectProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredPairs = useMemo(() => {
@@ -20,27 +21,24 @@ export function PairMultiSelect({ pairs, markets }: PairMultiSelectProps) {
   }, [pairs, searchTerm]);
 
   const handlePairToggle = (pair: string) => {
-    setSelectedPairs(prev =>
-      prev.includes(pair)
-        ? prev.filter(p => p !== pair)
-        : [...prev, pair]
-    );
+    const newSelected = selectedPairs.includes(pair)
+      ? selectedPairs.filter(p => p !== pair)
+      : [...selectedPairs, pair];
+    onSelectionChange(newSelected);
   };
 
   const handleSelectAll = () => {
-    setSelectedPairs(prev => {
-      const newSelected = [...prev];
-      filteredPairs.forEach(pair => {
-        if (!newSelected.includes(pair)) {
-          newSelected.push(pair);
-        }
-      });
-      return newSelected;
+    const newSelected = [...selectedPairs];
+    filteredPairs.forEach(pair => {
+      if (!newSelected.includes(pair)) {
+        newSelected.push(pair);
+      }
     });
+    onSelectionChange(newSelected);
   };
 
   const handleClear = () => {
-    setSelectedPairs([]);
+    onSelectionChange([]);
   };
 
   const getMaxLeverage = (pair: string): string => {

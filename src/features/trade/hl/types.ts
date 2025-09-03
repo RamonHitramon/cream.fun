@@ -1,9 +1,8 @@
-export type PerpMeta = {
+export interface PerpMeta {
   symbol: string;
-  maxLeverage?: number;
-  szDecimals?: number;
-  markPx?: number;
-  minOrderUsd?: number; // пока undefined, добавим позже
-};
+  markPrice?: number;
+  szDecimals: number;
+  maxLeverage: number;
+}
 
 export type PerpMetaMap = Record<string, PerpMeta>;
