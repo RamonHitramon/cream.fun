@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { TopBar } from '@/components/TopBar';
 import { KPIPanel } from '@/features/ui/KPI';

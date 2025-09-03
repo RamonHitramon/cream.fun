@@ -11,7 +11,7 @@ export function useMarketSelection() {
     setSelectedMarkets(markets);
   }, []);
 
-  const getSelectedMarkets = useCallback((markets: HyperliquidAsset[]): HyperliquidAsset[] => {
+  const getSelectedMarkets = useCallback((_markets: HyperliquidAsset[]): HyperliquidAsset[] => {
     return selectedMarkets;
   }, [selectedMarkets]);
 

@@ -46,8 +46,8 @@ export async function GET() {
       return Response.json({ perps: [], source: 'upstream', upstreamStatus: { url: upstream, status: r.status }, error: 'empty perps from upstream' }, { status: 200 });
     }
     return Response.json({ perps, source: 'upstream', upstreamStatus: { url: upstream, status: r.status }, error: null });
-  } catch (e: any) {
-    console.error('HL_UPSTREAM_ERR', upstream, e?.message || e);
-    return Response.json({ perps: [], source: 'error', error: String(e?.message || e) }, { status: 200 });
-  }
+      } catch (_: any) {
+      console.error('HL_UPSTREAM_ERR', upstream, 'fetch error');
+      return Response.json({ perps: [], source: 'error', error: 'fetch error' }, { status: 200 });
+    }
 }
