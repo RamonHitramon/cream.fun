@@ -95,11 +95,8 @@ export function useNotifications() {
     setNotifications(prev => [...prev, newNotification]);
   };
 
-  const removeNotification = (_id: number) => {
-    setNotifications(prev => prev.filter(notification => {
-      // Удаляем уведомление по ID
-      return notification.onClose !== undefined;
-    }));
+  const removeNotification = (id: number) => {
+    setNotifications(prev => prev.filter((_, index) => index !== id));
   };
 
   const clearAll = () => {

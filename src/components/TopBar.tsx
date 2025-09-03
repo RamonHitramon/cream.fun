@@ -3,6 +3,8 @@
 import { ConnectWallet } from './ConnectWallet';
 import { useWalletConnection } from '@/lib/wallet/useWalletAdapter';
 import { useDisconnect } from 'wagmi';
+import { Navigation } from './Navigation';
+import { WalletBalance } from './WalletBalance';
 
 export function TopBar() {
   const { address, isConnected, chainId } = useWalletConnection();
@@ -33,26 +35,49 @@ export function TopBar() {
       }}
     >
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div 
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-lg font-bold"
-            style={{
-              backgroundColor: 'var(--color-hl-primary)',
-              color: 'var(--color-hl-bg)'
-            }}
-          >
-            C
+        <div className="flex items-center gap-6">
+          {/* Logo */}
+          <div className="flex items-center gap-3">
+            <div 
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-lg font-bold"
+              style={{
+                backgroundColor: 'var(--color-hl-primary)',
+                color: 'var(--color-hl-bg)'
+              }}
+            >
+              C
+            </div>
+            <h1 
+              className="text-xl font-bold"
+              style={{ color: 'var(--color-hl-text)' }}
+            >
+              cream.fun
+            </h1>
           </div>
-          <h1 
-            className="text-xl font-bold"
-            style={{ color: 'var(--color-hl-text)' }}
-          >
-            cream.fun
-          </h1>
+
+          {/* Navigation */}
+          <Navigation />
         </div>
         
         <div className="flex items-center gap-3">
-          {isConnected && address && (
+          {/* Network Indicator */}
+          {chainId && (
+            <div className="px-3 py-2 rounded-lg border text-sm"
+              style={{
+                backgroundColor: 'var(--color-hl-surface)',
+                borderColor: 'var(--color-hl-border)',
+                color: 'var(--color-hl-muted)'
+              }}
+            >
+              {getNetworkName(chainId)}
+            </div>
+          )}
+
+          {/* Wallet Balance */}
+          <WalletBalance />
+
+          {/* Wallet Connection */}
+          {isConnected && address ? (
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg border"
               style={{
                 backgroundColor: 'var(--color-hl-surface)',
@@ -62,7 +87,6 @@ export function TopBar() {
             >
               <div className="text-sm">
                 <div className="font-medium">{shortenAddress(address)}</div>
-                <div className="text-xs opacity-70">{getNetworkName(chainId)}</div>
               </div>
               <button
                 onClick={() => disconnect()}
@@ -75,8 +99,9 @@ export function TopBar() {
                 Disconnect
               </button>
             </div>
+          ) : (
+            <ConnectWallet />
           )}
-          <ConnectWallet />
         </div>
       </div>
     </header>

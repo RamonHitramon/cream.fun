@@ -1,13 +1,6 @@
-import React from 'react';
-import { MarketDataProvider } from '@/components/MarketDataProvider';
-import { PageClient } from '@/components/PageClient';
+import { redirect } from 'next/navigation';
 
 export default function HomePage() {
-  return (
-    <MarketDataProvider>
-      <PageClient />
-    </MarketDataProvider>
-  );
+  // Редирект на страницу торговли
+  redirect('/trade');
 }
-
-// Force Vercel redeploy - UI improvements applied
