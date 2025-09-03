@@ -34,7 +34,7 @@ export function previewBasket(input: BasketInput, metas: PerpMetaMap): BasketPre
 
     // Рассчитываем размер позиции в базовой валюте
     // Для простоты используем текущую цену или 1 если цена недоступна
-    const price = meta.markPrice || 1;
+    const price = meta.markPx || 1;
     const sz = usdPerSymbol / price;
 
     // Округляем до нужного количества десятичных знаков

@@ -1,5 +1,5 @@
 import { Side, PreparedOrder } from './types';
-import { PerpMeta } from '../hl/types';
+import type { PerpMeta } from '@/features/trade/hl/types';
 
 export const DEFAULT_MIN_ORDER_USD = 10; // $10 minimum order size
 
@@ -22,20 +22,27 @@ export interface MinOrderConfig {
 }
 
 /**
- * Рассчитывает минимальный размер ордера в USD для пары
+ * Возвращает минимальный допустимый объём ордера в USD.
+ * Приоритет:
+ * 1) meta.minOrderUsd, если задано;
+ * 2) эвристика: markPx * 10^-szDecimals (если есть markPx и szDecimals);
+ * 3) жёсткий фолбэк = $1.
  */
 export function calculateMinOrderUsd(meta: PerpMeta): number {
-  if (meta.minOrderUsd) {
+  if (typeof meta.minOrderUsd === 'number' && isFinite(meta.minOrderUsd)) {
     return meta.minOrderUsd;
   }
-  
-  // Если нет minOrderUsd, оцениваем по szDecimals и markPx
-  if (meta.szDecimals !== undefined && meta.markPx) {
-    const minSz = Math.pow(10, -meta.szDecimals);
-    return minSz * meta.markPx;
+
+  const hasPx = typeof meta.markPx === 'number' && isFinite(meta.markPx);
+  const hasSz = typeof meta.szDecimals === 'number' && isFinite(meta.szDecimals);
+
+  if (hasPx && hasSz) {
+    const stepSz = Math.pow(10, -(meta.szDecimals as number));
+    const est = (meta.markPx as number) * stepSz;
+    if (est > 1) return est;
   }
-  
-  return DEFAULT_MIN_ORDER_USD;
+
+  return 1;
 }
 
 /**

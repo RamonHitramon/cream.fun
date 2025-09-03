@@ -13,7 +13,7 @@ export function usePerpMetas(): { metas: PerpMetaMap } {
     for (const market of markets) {
       result[market.symbol] = {
         symbol: market.symbol,
-        markPrice: market.markPx,
+        markPx: market.markPx,
         szDecimals: market.szDecimals || 3,
         maxLeverage: market.maxLeverage || 1,
         minOrderUsd: market.minOrderUsd
