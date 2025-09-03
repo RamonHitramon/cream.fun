@@ -1,35 +1,31 @@
 import React, { useState, useMemo } from 'react';
-import { PerpMarket } from '@/lib/hyperliquid/types';
-import { PerpMetaMap } from '@/features/trade/hl/types';
+import { HyperliquidAsset } from '@/lib/hyperliquid/types';
 
 export interface PairMultiSelectProps {
   pairs: string[];
-  markets: PerpMarket[];
-  metas: PerpMetaMap;
+  markets: HyperliquidAsset[];
+  metas: Record<string, any>; // Keep for backward compatibility
 }
 
-export function PairMultiSelect({ pairs, metas }: PairMultiSelectProps) {
+export function PairMultiSelect({ pairs, markets, metas }: PairMultiSelectProps) {
   const [selectedPairs, setSelectedPairs] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Фильтруем пары по поиску
   const filteredPairs = useMemo(() => {
     if (!searchTerm) return pairs;
-    return pairs.filter(pair => 
+    return pairs.filter(pair =>
       pair.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [pairs, searchTerm]);
 
-  // Обработчик выбора/отмены пары
   const handlePairToggle = (pair: string) => {
-    setSelectedPairs(prev => 
-      prev.includes(pair) 
+    setSelectedPairs(prev =>
+      prev.includes(pair)
         ? prev.filter(p => p !== pair)
         : [...prev, pair]
     );
   };
 
-  // Выбрать все отфильтрованные пары
   const handleSelectAll = () => {
     setSelectedPairs(prev => {
       const newSelected = [...prev];
@@ -42,16 +38,14 @@ export function PairMultiSelect({ pairs, metas }: PairMultiSelectProps) {
     });
   };
 
-  // Очистить все выбранные пары
   const handleClear = () => {
     setSelectedPairs([]);
   };
 
-  // Получить maxLeverage для пары
   const getMaxLeverage = (pair: string): string => {
-    const meta = metas[pair];
-    if (meta?.maxLeverage) {
-      return `${meta.maxLeverage}x`;
+    const market = markets.find(m => m.symbol === pair);
+    if (market?.maxLeverage) {
+      return `${market.maxLeverage}x`;
     }
     return 'N/A';
   };
@@ -113,7 +107,7 @@ export function PairMultiSelect({ pairs, metas }: PairMultiSelectProps) {
             const isSelected = selectedPairs.includes(pair);
             const maxLeverage = getMaxLeverage(pair);
             const displayTicker = truncateTicker(pair);
-            
+
             return (
               <div
                 key={pair}
@@ -131,11 +125,11 @@ export function PairMultiSelect({ pairs, metas }: PairMultiSelectProps) {
                     type="checkbox"
                     className="tick sr-only"
                     checked={isSelected}
-                    onChange={() => {}} // Обработчик уже в onClick родителя
+                    onChange={() => {}}
                   />
                   <div className="input-circle" />
                 </div>
-                
+
                 {/* Текст пары и размер плеча в одну строку */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">

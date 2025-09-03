@@ -1,13 +1,12 @@
 import React from 'react';
 import { Card } from '@/features/ui/Card';
 import { PairMultiSelect } from './PairMultiSelect';
-import { PerpMarket } from '@/lib/hyperliquid/types';
-import { PerpMetaMap } from '@/features/trade/hl/types';
+import { HyperliquidAsset } from '@/lib/hyperliquid/types';
 
 export interface LongBlockProps {
   pairs: string[];
-  markets: PerpMarket[];
-  metas: PerpMetaMap;
+  markets: HyperliquidAsset[];
+  metas: Record<string, any>; // Keep for backward compatibility
 }
 
 export function LongBlock({ pairs, markets, metas }: LongBlockProps) {

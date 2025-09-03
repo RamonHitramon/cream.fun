@@ -1,14 +1,15 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { PerpMarket } from '@/lib/hyperliquid/types';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { HyperliquidAsset, HyperliquidResponse } from '@/lib/hyperliquid/types';
 
 interface MarketDataContextType {
-  markets: PerpMarket[];
+  markets: HyperliquidAsset[];
   loading: boolean;
   error: string | null;
   refetch: () => void;
-  lastUpdated: number | null;
+  lastUpdated: Date | null;
+  isFallback: boolean;
 }
 
 const MarketDataContext = createContext<MarketDataContextType | undefined>(undefined);
@@ -22,32 +23,52 @@ export function useMarketData() {
 }
 
 interface MarketDataProviderProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export function MarketDataProvider({ children }: MarketDataProviderProps) {
-  const [markets, setMarkets] = useState<PerpMarket[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [markets, setMarkets] = useState<HyperliquidAsset[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isFallback, setIsFallback] = useState(false);
 
   const fetchMarkets = async () => {
-    setLoading(true);
-    setError(null);
     try {
-      console.log('Fetching markets from /api/markets...');
-      const response = await fetch('/api/markets');
-      console.log('Response status:', response.status);
+      setLoading(true);
+      setError(null);
+      
+      console.log('Fetching markets from API...');
+      const response = await fetch('/api/hyperliquid/markets');
+      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const data = await response.json();
-      console.log('Received data:', data.perps.length, 'markets');
-      setMarkets(data.perps);
-      setLastUpdated(data.updatedAt);
+      
+      const data: HyperliquidResponse = await response.json();
+      console.log('Markets API response:', data);
+      
+      if (data.perps && data.perps.length > 0) {
+        setMarkets(data.perps);
+        setIsFallback(data.fallback || false);
+        setLastUpdated(new Date());
+        
+        if (data.fallback) {
+          console.log('Using fallback data, upstream unavailable');
+        } else {
+          console.log(`Successfully loaded ${data.perps.length} real markets`);
+        }
+      } else {
+        throw new Error('No markets data received');
+      }
+      
     } catch (err) {
-      setError('Failed to load market data. Please try again.');
       console.error('Error fetching markets:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch markets');
+      
+      // Fallback to empty array to prevent UI crash
+      setMarkets([]);
+      setIsFallback(true);
     } finally {
       setLoading(false);
     }
@@ -55,14 +76,24 @@ export function MarketDataProvider({ children }: MarketDataProviderProps) {
 
   useEffect(() => {
     fetchMarkets();
+    
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(fetchMarkets, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
+
+  const refetch = () => {
+    fetchMarkets();
+  };
 
   const value: MarketDataContextType = {
     markets,
     loading,
     error,
-    refetch: fetchMarkets,
+    refetch,
     lastUpdated,
+    isFallback
   };
 
   return (

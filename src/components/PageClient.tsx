@@ -7,9 +7,9 @@ import { ActivePositions } from '@/features/positions/ActivePositions';
 import { ActionButtons } from '@/features/strategy/ActionButtons';
 import { OrderHistory } from '@/features/orders/OrderHistory';
 import { useMarketData } from '@/components/MarketDataProvider';
-import { usePerpMetas } from '@/features/trade/hooks/usePerpMetas';
 import { LoadingState } from '@/features/ui/LoadingState';
 import { TopBar } from '@/components/TopBar';
+import { HyperliquidAsset } from '@/lib/hyperliquid/types';
 
 const kpiData = [
   { title: 'Balance', value: '$0.00', color: 'default' as const },
@@ -27,10 +27,10 @@ const kpiData = [
 ];
 
 export function PageClient() {
-  const { markets, loading, error, refetch } = useMarketData();
-  const metas = usePerpMetas();
+  const { markets, loading, error, refetch, isFallback } = useMarketData();
 
-  const marketPairs = markets.map(market => market.display);
+  // Convert HyperliquidAsset to PerpMarket for backward compatibility
+  const marketPairs = markets.map(market => market.symbol);
 
   const updatedKpiData = [
     ...kpiData.slice(0, -1),
@@ -48,8 +48,8 @@ export function PageClient() {
   ];
 
   console.log('Markets:', markets);
-  console.log('Perp Metas:', metas);
   console.log('Market Pairs:', marketPairs);
+  console.log('Using fallback data:', isFallback);
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-hl-bg)' }}>
@@ -58,10 +58,21 @@ export function PageClient() {
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         <KPIPanel data={updatedKpiData} />
 
+        {/* Show fallback warning if using mock data */}
+        {isFallback && (
+          <div className="mb-4 p-3 rounded-lg border" style={{
+            backgroundColor: 'rgba(255, 111, 97, 0.1)',
+            borderColor: 'var(--color-hl-danger)',
+            color: 'var(--color-hl-danger)'
+          }}>
+            ⚠️ Using fallback data - Hyperliquid API temporarily unavailable
+          </div>
+        )}
+
         <LoadingState loading={loading} error={error} onRetry={refetch}>
           <div className="grid grid-cols-1 xl:grid-cols-[minmax(680px,1fr)_minmax(460px,0.8fr)] gap-6">
             <div className="space-y-6">
-              <CreateStrategy pairs={marketPairs} markets={markets} metas={metas} />
+              <CreateStrategy pairs={marketPairs} markets={markets} metas={{}} />
               <ActionButtons />
             </div>
 
