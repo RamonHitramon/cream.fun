@@ -26,6 +26,12 @@ export function previewBasket(input: BasketInput, metas: PerpMetaMap): BasketPre
       continue;
     }
 
+    // Проверяем минимальный размер ордера
+    if (meta.minOrderUsd && usdPerSymbol < meta.minOrderUsd) {
+      errors.push(`${symbol}: Minimum order size is $${meta.minOrderUsd}, got $${usdPerSymbol.toFixed(2)}`);
+      continue;
+    }
+
     // Рассчитываем размер позиции в базовой валюте
     // Для простоты используем текущую цену или 1 если цена недоступна
     const price = meta.markPrice || 1;

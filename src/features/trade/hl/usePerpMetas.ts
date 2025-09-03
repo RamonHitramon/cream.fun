@@ -15,7 +15,8 @@ export function usePerpMetas(): { metas: PerpMetaMap } {
         symbol: market.symbol,
         markPrice: market.markPx,
         szDecimals: market.szDecimals || 3,
-        maxLeverage: market.maxLeverage || 1
+        maxLeverage: market.maxLeverage || 1,
+        minOrderUsd: market.minOrderUsd
       };
     }
     
