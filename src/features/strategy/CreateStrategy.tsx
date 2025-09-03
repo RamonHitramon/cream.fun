@@ -7,6 +7,7 @@ import { ShortBlock } from './ShortBlock';
 import { HyperliquidAsset } from '@/lib/hyperliquid/types';
 import { usePerpMetas } from '@/features/trade/hl/usePerpMetas';
 import { useBasketPreview } from '@/features/trade/basket/useBasketPreview';
+import { useWalletGuard } from '@/components/WalletGuard';
 
 export interface CreateStrategyProps {
   pairs: string[];
@@ -16,6 +17,7 @@ export interface CreateStrategyProps {
 export function CreateStrategy({ pairs, markets }: CreateStrategyProps) {
   const { metas } = usePerpMetas();
   const { loading, preview, calculate } = useBasketPreview(metas);
+  const { checkWallet, checkPreview } = useWalletGuard();
   
   // Long positions state
   const [longSelectedPairs, setLongSelectedPairs] = useState<string[]>([]);
@@ -26,7 +28,11 @@ export function CreateStrategy({ pairs, markets }: CreateStrategyProps) {
   const [shortUsdAmount, setShortUsdAmount] = useState('');
 
   const handleLongCalculate = async () => {
-    if (longSelectedPairs.length === 0 || !longUsdAmount) return;
+    if (!checkWallet('calculate strategy')) return;
+    
+    if (longSelectedPairs.length === 0 || !longUsdAmount) {
+      return;
+    }
     
     await calculate({
       orderType: 'market',
@@ -37,7 +43,11 @@ export function CreateStrategy({ pairs, markets }: CreateStrategyProps) {
   };
 
   const handleShortCalculate = async () => {
-    if (shortSelectedPairs.length === 0 || !shortUsdAmount) return;
+    if (!checkWallet('calculate strategy')) return;
+    
+    if (shortSelectedPairs.length === 0 || !shortUsdAmount) {
+      return;
+    }
     
     await calculate({
       orderType: 'market',
@@ -45,6 +55,14 @@ export function CreateStrategy({ pairs, markets }: CreateStrategyProps) {
       totalUsd: Number(shortUsdAmount),
       symbols: shortSelectedPairs,
     });
+  };
+
+  const handleOpenPosition = async () => {
+    if (!checkWallet('open position')) return;
+    if (!checkPreview(!!preview, 'opening position')) return;
+    
+    // Здесь будет логика открытия позиции
+    console.log('Opening position with preview:', preview);
   };
 
   return (
@@ -76,6 +94,17 @@ export function CreateStrategy({ pairs, markets }: CreateStrategyProps) {
             onCalculate={handleShortCalculate}
             loading={loading}
           />
+
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-4 border-t border-hl-border">
+            <button
+              onClick={handleOpenPosition}
+              disabled={!preview || loading}
+              className="px-6 py-3 bg-hl-primary text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-hl-primary-dark transition-colors"
+            >
+              {loading ? 'Processing...' : 'Open Position'}
+            </button>
+          </div>
         </div>
 
         {/* Preview Table */}
@@ -102,10 +131,10 @@ export function CreateStrategy({ pairs, markets }: CreateStrategyProps) {
             </table>
             
             {preview.errors && preview.errors.length > 0 && (
-              <div className="mt-3 p-2 rounded border border-red-500/20 bg-red-500/10">
-                <div className="text-red-600 text-xs font-medium">Errors:</div>
+              <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded text-red-800 text-xs">
+                <div className="font-semibold mb-1">Errors:</div>
                 {preview.errors.map((error, index) => (
-                  <div key={index} className="text-red-500/80 text-xs">• {error}</div>
+                  <div key={index}>• {error}</div>
                 ))}
               </div>
             )}

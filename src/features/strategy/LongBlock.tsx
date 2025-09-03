@@ -4,6 +4,7 @@ import React from 'react';
 import { Card } from '@/features/ui/Card';
 import { PairMultiSelect } from './PairMultiSelect';
 import { HyperliquidAsset } from '@/lib/hyperliquid/types';
+import { useWalletGuard } from '@/components/WalletGuard';
 
 export interface LongBlockProps {
   pairs: string[];
@@ -26,6 +27,13 @@ export function LongBlock({
   onCalculate,
   loading = false
 }: LongBlockProps) {
+  const { checkWallet } = useWalletGuard();
+
+  const handleCalculate = () => {
+    if (!checkWallet('calculate long strategy')) return;
+    onCalculate();
+  };
+
   return (
     <Card>
       <div className="p-3">
@@ -68,7 +76,7 @@ export function LongBlock({
 
           {/* Calculate Button */}
           <button
-            onClick={onCalculate}
+            onClick={handleCalculate}
             disabled={loading || selectedPairs.length === 0 || !usdAmount}
             className="w-full px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
