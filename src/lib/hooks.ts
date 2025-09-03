@@ -5,34 +5,16 @@ import { HyperliquidAsset } from './hyperliquid/types';
  * Хук для работы с выбранными рынками
  */
 export function useMarketSelection() {
-  const [selectedMarkets, setSelectedMarkets] = useState<HyperliquidAsset[]>([]);
+  const [selectedMarkets, setSelectedMarkets] = useState<string[]>([]);
 
-  const selectAllMarkets = useCallback((markets: HyperliquidAsset[]) => {
-    setSelectedMarkets(markets);
-  }, []);
-
-  const getSelectedMarkets = useCallback((_markets: HyperliquidAsset[]): HyperliquidAsset[] => {
+  const getSelectedMarkets = useCallback(() => {
     return selectedMarkets;
   }, [selectedMarkets]);
 
-  const toggleMarket = useCallback((market: HyperliquidAsset) => {
-    setSelectedMarkets(prev => 
-      prev.find(m => m.symbol === market.symbol)
-        ? prev.filter(m => m.symbol !== market.symbol)
-        : [...prev, market]
-    );
-  }, []);
-
-  const clearSelection = useCallback(() => {
-    setSelectedMarkets([]);
-  }, []);
-
   return {
     selectedMarkets,
-    selectAllMarkets,
+    setSelectedMarkets,
     getSelectedMarkets,
-    toggleMarket,
-    clearSelection,
   };
 }
 

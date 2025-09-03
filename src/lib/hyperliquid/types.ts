@@ -3,6 +3,8 @@ export interface HyperliquidAsset {
   maxLeverage?: number;
   szDecimals?: number;
   markPx?: number;
+  /** Минимальный объём ордера в USD, если известно */
+  minOrderUsd?: number;
 }
 
 export interface HyperliquidResponse {

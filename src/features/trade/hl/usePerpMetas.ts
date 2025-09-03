@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useMarketData } from '@/components/MarketDataProvider';
-import type { PerpMetaMap, PerpMeta } from './types';
+import type { PerpMetaMap } from './types';
 
 export function usePerpMetas(): { metas: PerpMetaMap } {
   const { markets } = useMarketData();

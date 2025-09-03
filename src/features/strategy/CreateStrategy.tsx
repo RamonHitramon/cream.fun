@@ -7,7 +7,6 @@ import { ShortBlock } from './ShortBlock';
 import { HyperliquidAsset } from '@/lib/hyperliquid/types';
 import { usePerpMetas } from '@/features/trade/hl/usePerpMetas';
 import { useBasketPreview } from '@/features/trade/basket/useBasketPreview';
-import type { BasketPreview } from '@/features/trade/basket/types';
 
 export interface CreateStrategyProps {
   pairs: string[];
@@ -16,7 +15,7 @@ export interface CreateStrategyProps {
 
 export function CreateStrategy({ pairs, markets }: CreateStrategyProps) {
   const { metas } = usePerpMetas();
-  const { loading, preview, calculate, reset } = useBasketPreview(metas);
+  const { loading, preview, calculate } = useBasketPreview(metas);
   
   // Long positions state
   const [longSelectedPairs, setLongSelectedPairs] = useState<string[]>([]);

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card } from '@/features/ui/Card';
 import { PairMultiSelect } from './PairMultiSelect';
 import { HyperliquidAsset } from '@/lib/hyperliquid/types';
