@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { BasketInput, BasketPreview, PreparedOrder } from '../builder/types';
-import { PerpMeta } from '../hl/types';
 import { HyperliquidAsset } from '@/lib/hyperliquid/types';
 import { convertToPerpMeta, prepareBasketPreview } from '../builder/placeBasket';
 

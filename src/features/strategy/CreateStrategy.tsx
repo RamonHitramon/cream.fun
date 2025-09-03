@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import React from 'react';
 import { Card } from '@/features/ui/Card';
 import { LongBlock } from './LongBlock';
@@ -18,7 +16,7 @@ export function CreateStrategy({ pairs, markets }: CreateStrategyProps) {
         <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--color-hl-text)' }}>
           Create Strategy
         </h2>
-        
+
         <div className="space-y-6">
           <LongBlock pairs={pairs} markets={markets} />
           <ShortBlock pairs={pairs} markets={markets} />

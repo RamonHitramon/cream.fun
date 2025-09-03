@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import React from 'react';
 import { Card } from '@/features/ui/Card';
 import { PairMultiSelect } from './PairMultiSelect';
@@ -17,7 +15,7 @@ export function LongBlock({ pairs, markets }: LongBlockProps) {
         <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--color-hl-success)' }}>
           Long Positions
         </h3>
-        
+
         <div className="space-y-3">
           {/* USD Amount */}
           <div>

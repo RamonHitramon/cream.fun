@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import React, { useState, useMemo } from 'react';
 import { HyperliquidAsset } from '@/lib/hyperliquid/types';
 
@@ -51,7 +49,6 @@ export function PairMultiSelect({ pairs, markets }: PairMultiSelectProps) {
     return 'N/A';
   };
 
-  // Обрезать длинные тикеры
   const truncateTicker = (ticker: string): string => {
     if (ticker.length > 8) {
       return ticker.slice(0, 8) + '...';
@@ -61,7 +58,6 @@ export function PairMultiSelect({ pairs, markets }: PairMultiSelectProps) {
 
   return (
     <div className="space-y-2">
-      {/* Поиск */}
       <div>
         <input
           type="text"
@@ -77,7 +73,6 @@ export function PairMultiSelect({ pairs, markets }: PairMultiSelectProps) {
         />
       </div>
 
-      {/* Кнопки управления */}
       <div className="flex gap-2">
         <button
           onClick={handleSelectAll}
@@ -101,7 +96,6 @@ export function PairMultiSelect({ pairs, markets }: PairMultiSelectProps) {
         </button>
       </div>
 
-      {/* Список пар */}
       <div className="pairs-scroll max-h-48 overflow-y-auto">
         <div className="grid grid-cols-3 gap-2">
           {filteredPairs.map((pair) => {
@@ -118,9 +112,8 @@ export function PairMultiSelect({ pairs, markets }: PairMultiSelectProps) {
                   borderColor: isSelected ? 'var(--color-hl-primary)' : 'var(--color-hl-border)',
                   backgroundColor: isSelected ? 'rgba(111, 255, 176, 0.1)' : 'transparent'
                 }}
-                title={pair} // Показываем полное название при наведении
+                title={pair}
               >
-                {/* Чекбокс */}
                 <div className="flex items-center">
                   <input
                     type="checkbox"
@@ -131,7 +124,6 @@ export function PairMultiSelect({ pairs, markets }: PairMultiSelectProps) {
                   <div className="input-circle" />
                 </div>
 
-                {/* Текст пары и размер плеча в одну строку */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm" style={{ color: 'var(--color-hl-text)' }}>
@@ -148,7 +140,6 @@ export function PairMultiSelect({ pairs, markets }: PairMultiSelectProps) {
         </div>
       </div>
 
-      {/* Статистика выбора */}
       {selectedPairs.length > 0 && (
         <div className="text-xs" style={{ color: 'var(--color-hl-muted)' }}>
           Selected: {selectedPairs.length} / {pairs.length} pairs
