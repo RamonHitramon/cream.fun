@@ -1,82 +1,57 @@
 import React from 'react';
-import { PerpMarket } from '@/lib/hyperliquid/types';
-import { formatCurrency, formatPercentage } from '@/lib/format';
+import { HyperliquidAsset } from '@/lib/hyperliquid/types';
 
 interface MarketInfoProps {
-  market: PerpMarket;
-  showDetails?: boolean;
+  market: HyperliquidAsset;
 }
 
-export function MarketInfo({ market, showDetails = false }: MarketInfoProps) {
+export function MarketInfo({ market }: MarketInfoProps) {
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="font-medium" style={{ color: 'var(--color-hl-text)' }}>
-            {market.display}
-          </div>
-          <div className="text-sm" style={{ color: 'var(--color-hl-muted)' }}>
-            {market.symbol}
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="font-bold" style={{ color: 'var(--color-hl-text)' }}>
-            {market.markPx ? formatCurrency(market.markPx) : 'N/A'}
-          </div>
-          {market.funding !== undefined && (
-            <div className="text-sm" style={{ 
-              color: market.funding >= 0 ? 'var(--color-hl-success)' : 'var(--color-hl-danger)' 
-            }}>
-              {formatPercentage(market.funding * 100)}
-            </div>
-          )}
-        </div>
+    <div className="p-4 rounded-lg border" style={{
+      backgroundColor: 'var(--color-hl-surface)',
+      borderColor: 'var(--color-hl-border)'
+    }}>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-lg font-semibold" style={{ color: 'var(--color-hl-text)' }}>
+          {market.symbol}
+        </h3>
+        <span className="text-sm" style={{ color: 'var(--color-hl-muted)' }}>
+          {market.maxLeverage ? `${market.maxLeverage}x` : 'N/A'}
+        </span>
       </div>
       
-      {showDetails && (
-        <div className="grid grid-cols-2 gap-2 text-xs" style={{ color: 'var(--color-hl-muted)' }}>
-          <div>Max Leverage: {market.maxLeverage}x</div>
-          <div>OI: {market.openInterest ? formatCurrency(market.openInterest) : 'N/A'}</div>
+      <div className="space-y-2">
+        <div className="flex justify-between">
+          <span className="text-sm" style={{ color: 'var(--color-hl-muted)' }}>
+            Price:
+          </span>
+          <span className="font-medium" style={{ color: 'var(--color-hl-text)' }}>
+            ${market.markPx?.toFixed(2) || 'N/A'}
+          </span>
         </div>
-      )}
+        
+        <div className="flex justify-between">
+          <span className="text-sm" style={{ color: 'var(--color-hl-muted)' }}>
+            Size Decimals:
+          </span>
+          <span className="font-medium" style={{ color: 'var(--color-hl-text)' }}>
+            {market.szDecimals || 'N/A'}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
 
 interface MarketListProps {
-  markets: PerpMarket[];
-  selectedMarkets: string[];
-  onMarketToggle: (marketId: string) => void;
-  showDetails?: boolean;
+  markets: HyperliquidAsset[];
 }
 
-export function MarketList({ markets, selectedMarkets, onMarketToggle, showDetails = false }: MarketListProps) {
+export function MarketList({ markets }: MarketListProps) {
   return (
-    <div className="space-y-2">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {markets.map((market) => (
-        <label
-          key={market.id}
-          className="flex items-center p-3 rounded-lg cursor-pointer transition-colors hover:bg-white/5"
-          style={{
-            backgroundColor: selectedMarkets.includes(market.id) ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
-            border: selectedMarkets.includes(market.id) ? '1px solid var(--color-hl-primary)' : '1px solid transparent'
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={selectedMarkets.includes(market.id)}
-            onChange={() => onMarketToggle(market.id)}
-            className="mr-3 w-4 h-4 rounded"
-            style={{
-              accentColor: 'var(--color-hl-primary)',
-              backgroundColor: 'var(--color-hl-bg)',
-              borderColor: 'var(--color-hl-border)'
-            }}
-          />
-          <div className="flex-1">
-            <MarketInfo market={market} showDetails={showDetails} />
-          </div>
-        </label>
+        <MarketInfo key={market.symbol} market={market} />
       ))}
     </div>
   );

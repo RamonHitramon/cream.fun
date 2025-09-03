@@ -1,36 +1,21 @@
-import { useState, useCallback } from 'react';
-import { PerpMarket } from './hyperliquid/types';
+import { useCallback } from 'react';
+import { HyperliquidAsset } from './hyperliquid/types';
 
-// Hook for managing market selection
+/**
+ * Хук для работы с выбранными рынками
+ */
 export function useMarketSelection() {
-  const [selectedMarkets, setSelectedMarkets] = useState<string[]>([]);
-
-  const toggleMarket = useCallback((marketId: string) => {
-    setSelectedMarkets(prev => 
-      prev.includes(marketId) 
-        ? prev.filter(id => id !== marketId)
-        : [...prev, marketId]
-    );
+  const selectAllMarkets = useCallback((markets: HyperliquidAsset[]) => {
+    return markets.map(market => market.symbol);
   }, []);
 
-  const selectAllMarkets = useCallback((markets: PerpMarket[]) => {
-    setSelectedMarkets(markets.map(market => market.id));
+  const getSelectedMarkets = useCallback((markets: HyperliquidAsset[]): HyperliquidAsset[] => {
+    return markets;
   }, []);
-
-  const clearSelection = useCallback(() => {
-    setSelectedMarkets([]);
-  }, []);
-
-  const getSelectedMarkets = useCallback((markets: PerpMarket[]): PerpMarket[] => {
-    return markets.filter(market => selectedMarkets.includes(market.id));
-  }, [selectedMarkets]);
 
   return {
-    selectedMarkets,
-    toggleMarket,
     selectAllMarkets,
-    clearSelection,
-    getSelectedMarkets
+    getSelectedMarkets,
   };
 }
 

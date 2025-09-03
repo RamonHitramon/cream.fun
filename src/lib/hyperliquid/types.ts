@@ -10,11 +10,3 @@ export interface HyperliquidResponse {
   error?: string;
   fallback?: boolean;
 }
-
-// Legacy interface for backward compatibility
-export interface PerpMarket {
-  display: string;
-  symbol: string;
-  price?: number;
-  maxLeverage?: number;
-}

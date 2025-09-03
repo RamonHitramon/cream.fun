@@ -1,6 +1,6 @@
 import { BasketInput, BasketTradeResult, Side, BasketPreview } from './types';
 import { PerpMeta } from '../hl/types';
-import { PerpMarket } from '@/lib/hyperliquid/types';
+import { HyperliquidAsset } from '@/lib/hyperliquid/types';
 import { previewBasket } from './preview';
 import { builderClient, WalletLike } from './client';
 
@@ -64,9 +64,9 @@ export function validateBasketInput(input: BasketInput, metas: Record<string, Pe
 }
 
 /**
- * Конвертирует PerpMarket в PerpMeta
+ * Конвертирует HyperliquidAsset в PerpMeta
  */
-export function convertToPerpMeta(markets: PerpMarket[]): Record<string, PerpMeta> {
+export function convertToPerpMeta(markets: HyperliquidAsset[]): Record<string, PerpMeta> {
   const metaMap: Record<string, PerpMeta> = {};
   
   markets.forEach(market => {

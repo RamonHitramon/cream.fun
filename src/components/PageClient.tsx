@@ -30,7 +30,6 @@ const kpiData = [
 export function PageClient() {
   const { markets, loading, error, refetch, isFallback } = useMarketData();
 
-  // Convert HyperliquidAsset to PerpMarket for backward compatibility
   const marketPairs = markets.map(market => market.symbol);
 
   const updatedKpiData = [
@@ -59,7 +58,6 @@ export function PageClient() {
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         <KPIPanel data={updatedKpiData} />
 
-        {/* Show fallback warning if using mock data */}
         {isFallback && (
           <div className="mb-4 p-3 rounded-lg border" style={{
             backgroundColor: 'rgba(255, 111, 97, 0.1)',
