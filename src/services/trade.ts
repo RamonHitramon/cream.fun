@@ -1,4 +1,12 @@
 import { getCurrentConfig } from '@/config/hyperliquid';
+import { ensureAgent, type AgentKey } from './agent';
+import { getFreshNonce, bumpNonce } from './nonce';
+import {
+  createSignedOrder,
+  createSignedCancelOrder,
+  createSignedClosePosition,
+  createActionPayload
+} from '@/utils/hlSign';
 
 export interface OrderRequest {
   a: string;        // asset (BTC, ETH, etc.)
@@ -39,6 +47,10 @@ export interface Position {
   markPrice: string;
   pnl: string;
 }
+
+// Agent key cache
+let cachedAgentKey: AgentKey | null = null;
+let agentPin: string | null = null;
 
 // Retry logic with exponential backoff
 async function fetchWithRetry(
@@ -98,17 +110,46 @@ function mapErrorToReadable(error: unknown): string {
   return 'Unknown error occurred';
 }
 
-// Place order
-export async function placeOrder(order: OrderRequest): Promise<TradeResponse> {
+// Ensure agent key is available
+async function ensureAgentKey(pin: string): Promise<AgentKey> {
+  if (cachedAgentKey && agentPin === pin) {
+    return cachedAgentKey;
+  }
+
+  try {
+    const agentKey = await ensureAgent(pin);
+    cachedAgentKey = agentKey;
+    agentPin = pin;
+    console.log('[HL] Agent key ensured:', agentKey.publicKey.slice(0, 20) + '...');
+    return agentKey;
+  } catch (error) {
+    console.error('[HL] Failed to ensure agent key:', error);
+    throw new Error('Failed to setup agent key. Please check your PIN and try again.');
+  }
+}
+
+// Place order with agent key and nonce
+export async function placeOrder(
+  order: OrderRequest, 
+  pin: string, 
+  userAddress: string
+): Promise<TradeResponse> {
   try {
     console.log('[HL] Placing order:', order);
     
+    // Ensure agent key is available
+    const agentKey = await ensureAgentKey(pin);
+    
+    // Get fresh nonce
+    const nonce = await getFreshNonce(userAddress);
+    
+    // Create signed order
+    const signedOrder = createSignedOrder(order, agentKey, nonce, userAddress);
+    
+    // Create payload for API
+    const payload = createActionPayload(signedOrder);
+    
     const config = getCurrentConfig();
-    const payload = {
-      type: 'order',
-      orders: [order]
-    };
-
     const response = await fetchWithRetry(config.exchangeUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -118,6 +159,9 @@ export async function placeOrder(order: OrderRequest): Promise<TradeResponse> {
     const data = await response.json();
     
     if (response.ok) {
+      // Bump nonce after successful order
+      await bumpNonce(userAddress);
+      
       console.log('[HL] Order placed successfully:', data);
       return {
         success: true,
@@ -142,26 +186,40 @@ export async function placeOrder(order: OrderRequest): Promise<TradeResponse> {
   }
 }
 
-// Cancel order
-export async function cancelOrder(oid: string): Promise<TradeResponse> {
+// Cancel order with agent key and nonce
+export async function cancelOrder(
+  oid: string, 
+  pin: string, 
+  userAddress: string
+): Promise<TradeResponse> {
   try {
     console.log('[HL] Cancelling order:', oid);
     
-    const config = getCurrentConfig();
-    const payload: CancelRequest = { oid };
+    // Ensure agent key is available
+    const agentKey = await ensureAgentKey(pin);
+    
+    // Get fresh nonce
+    const nonce = await getFreshNonce(userAddress);
+    
+    // Create signed cancel order
+    const signedCancel = createSignedCancelOrder(oid, agentKey, nonce, userAddress);
+    
+    // Create payload for API
+    const payload = createActionPayload(signedCancel);
 
+    const config = getCurrentConfig();
     const response = await fetchWithRetry(config.exchangeUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'cancel',
-        cancels: [payload]
-      })
+      body: JSON.stringify(payload)
     });
 
     const data = await response.json();
     
     if (response.ok) {
+      // Bump nonce after successful cancellation
+      await bumpNonce(userAddress);
+      
       console.log('[HL] Order cancelled successfully:', data);
       return {
         success: true,
@@ -185,20 +243,54 @@ export async function cancelOrder(oid: string): Promise<TradeResponse> {
   }
 }
 
-// Close position (reduce only market order)
-export async function closePosition(asset: string, size: string): Promise<TradeResponse> {
+// Close position with agent key and nonce
+export async function closePosition(
+  asset: string, 
+  size: string, 
+  pin: string, 
+  userAddress: string
+): Promise<TradeResponse> {
   try {
     console.log('[HL] Closing position:', { asset, size });
     
-    const order: OrderRequest = {
-      a: asset,
-      b: 'sell', // Assuming long position, adjust logic as needed
-      t: 'market',
-      s: size,
-      ro: true // reduce only
-    };
+    // Ensure agent key is available
+    const agentKey = await ensureAgentKey(pin);
+    
+    // Get fresh nonce
+    const nonce = await getFreshNonce(userAddress);
+    
+    // Create signed close position
+    const signedClose = createSignedClosePosition(asset, size, agentKey, nonce, userAddress);
+    
+    // Create payload for API
+    const payload = createActionPayload(signedClose);
 
-    return await placeOrder(order);
+    const config = getCurrentConfig();
+    const response = await fetchWithRetry(config.exchangeUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+    
+    if (response.ok) {
+      // Bump nonce after successful position close
+      await bumpNonce(userAddress);
+      
+      console.log('[HL] Position closed successfully:', data);
+      return {
+        success: true,
+        data
+      };
+    } else {
+      const errorMsg = mapErrorToReadable(data);
+      console.error('[HL] Position close failed:', data);
+      return {
+        success: false,
+        error: errorMsg
+      };
+    }
   } catch (error) {
     const errorMsg = mapErrorToReadable(error);
     console.error('[HL] Position close error:', error);
@@ -253,4 +345,19 @@ export async function getPositions(): Promise<Position[]> {
     console.error('[HL] Failed to fetch positions:', error);
     return [];
   }
+}
+
+// Utility functions
+export function getCachedAgentKey(): AgentKey | null {
+  return cachedAgentKey;
+}
+
+export function clearAgentKeyCache(): void {
+  cachedAgentKey = null;
+  agentPin = null;
+  console.log('[HL] Agent key cache cleared');
+}
+
+export function isAgentKeyCached(): boolean {
+  return cachedAgentKey !== null;
 }

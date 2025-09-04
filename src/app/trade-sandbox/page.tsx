@@ -3,17 +3,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/features/ui/Card';
 import { useWalletConnection } from '@/lib/wallet/useWalletAdapter';
-import { 
-  placeOrder, 
-  cancelOrder, 
-  closePosition, 
-  getOpenOrders, 
+import {
+  placeOrder,
+  cancelOrder,
+  closePosition,
+  getOpenOrders,
   getPositions,
+  getCachedAgentKey,
   type OrderRequest,
   type OpenOrder,
   type Position
 } from '@/services/trade';
 import { getCurrentConfig } from '@/config/hyperliquid';
+import { SetupAgent } from '@/components/SetupAgent';
+import type { AgentKey } from '@/services/agent';
 
 export default function TradeSandboxPage() {
   const { isConnected, address } = useWalletConnection();
@@ -21,6 +24,9 @@ export default function TradeSandboxPage() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [showSetupAgent, setShowSetupAgent] = useState(false);
+  const [pin, setPin] = useState('');
+  const [agentKey, setAgentKey] = useState<AgentKey | null>(null);
 
   // Order form state
   const [orderForm, setOrderForm] = useState<OrderRequest>({
@@ -33,6 +39,16 @@ export default function TradeSandboxPage() {
   });
 
   const config = getCurrentConfig();
+
+  // Check for cached agent key on mount
+  useEffect(() => {
+    if (isConnected && address) {
+      const cached = getCachedAgentKey();
+      if (cached) {
+        setAgentKey(cached);
+      }
+    }
+  }, [isConnected, address]);
 
   // Load orders and positions
   const loadData = useCallback(async () => {
@@ -61,6 +77,12 @@ export default function TradeSandboxPage() {
     }
   }, [isConnected, loadData]);
 
+  // Handle agent setup success
+  const handleAgentSetupSuccess = (newAgentKey: AgentKey) => {
+    setAgentKey(newAgentKey);
+    setMessage('Agent key setup successful! You can now place orders.');
+  };
+
   // Place order
   const handlePlaceOrder = async () => {
     if (!isConnected) {
@@ -68,11 +90,22 @@ export default function TradeSandboxPage() {
       return;
     }
 
+    if (!agentKey) {
+      setMessage('Please setup agent key first');
+      setShowSetupAgent(true);
+      return;
+    }
+
+    if (!pin) {
+      setMessage('Please enter your PIN to place orders');
+      return;
+    }
+
     setLoading(true);
     setMessage('');
 
     try {
-      const result = await placeOrder(orderForm);
+      const result = await placeOrder(orderForm, pin, address!);
       
       if (result.success) {
         setMessage(`Order placed successfully! Order ID: ${result.orderId}`);
@@ -97,11 +130,16 @@ export default function TradeSandboxPage() {
 
   // Cancel order
   const handleCancelOrder = async (oid: string) => {
+    if (!agentKey || !pin) {
+      setMessage('Please setup agent key and enter PIN first');
+      return;
+    }
+
     setLoading(true);
     setMessage('');
 
     try {
-      const result = await cancelOrder(oid);
+      const result = await cancelOrder(oid, pin, address!);
       
       if (result.success) {
         setMessage('Order cancelled successfully');
@@ -118,11 +156,16 @@ export default function TradeSandboxPage() {
 
   // Close position
   const handleClosePosition = async (asset: string, size: string) => {
+    if (!agentKey || !pin) {
+      setMessage('Please setup agent key and enter PIN first');
+      return;
+    }
+
     setLoading(true);
     setMessage('');
 
     try {
-      const result = await closePosition(asset, size);
+      const result = await closePosition(asset, size, pin, address!);
       
       if (result.success) {
         setMessage('Position closed successfully');
@@ -169,10 +212,72 @@ export default function TradeSandboxPage() {
             <div className="space-y-2 text-sm">
               <div><strong>Environment:</strong> {config.infoUrl.includes('testnet') ? 'Testnet' : 'Mainnet'}</div>
               <div><strong>Wallet:</strong> {address?.slice(0, 6)}...{address?.slice(-4)}</div>
+              <div><strong>Agent Key:</strong> {agentKey ? '✅ Configured' : '❌ Not Setup'}</div>
+              {agentKey && (
+                <div><strong>Public Key:</strong> {agentKey.publicKey.slice(0, 20)}...</div>
+              )}
             </div>
           </div>
         </Card>
       </div>
+
+      {/* Agent Setup Section */}
+      {!agentKey && (
+        <Card className="mb-6">
+          <div className="p-6 text-center">
+            <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--color-hl-text)' }}>
+              Setup Required
+            </h2>
+            <p className="mb-4" style={{ color: 'var(--color-hl-muted)' }}>
+              You need to setup an agent key to trade on Hyperliquid.
+            </p>
+            <button
+              onClick={() => setShowSetupAgent(true)}
+              className="px-6 py-3 bg-hl-primary text-white rounded-lg font-medium"
+            >
+              Setup Agent Key
+            </button>
+          </div>
+        </Card>
+      )}
+
+      {/* PIN Input Section */}
+      {agentKey && (
+        <Card className="mb-6">
+          <div className="p-6">
+            <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--color-hl-text)' }}>
+              Enter PIN
+            </h2>
+            <div className="flex gap-4 items-end">
+              <div className="flex-1">
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-hl-text)' }}>
+                  PIN
+                </label>
+                <input
+                  type="password"
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value)}
+                  placeholder="Enter your 6+ digit PIN"
+                  className="w-full px-3 py-2 rounded-lg border"
+                  style={{
+                    backgroundColor: 'var(--color-hl-surface)',
+                    borderColor: 'var(--color-hl-border)',
+                    color: 'var(--color-hl-text)'
+                  }}
+                  maxLength={20}
+                />
+              </div>
+              <button
+                onClick={() => setShowSetupAgent(true)}
+                className="px-4 py-2 bg-hl-surface border border-hl-border rounded-lg text-sm"
+                style={{ color: 'var(--color-hl-text)' }}
+              >
+                Change Key
+              </button>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Order Form */}
       <Card className="mb-6">
@@ -294,7 +399,7 @@ export default function TradeSandboxPage() {
 
           <button
             onClick={handlePlaceOrder}
-            disabled={loading || !orderForm.s || (orderForm.t === 'limit' && !orderForm.p)}
+            disabled={loading || !agentKey || !pin || !orderForm.s || (orderForm.t === 'limit' && !orderForm.p)}
             className="px-6 py-3 bg-hl-primary text-white rounded-lg font-medium disabled:opacity-50"
           >
             {loading ? 'Placing...' : 'Place Order'}
@@ -354,7 +459,7 @@ export default function TradeSandboxPage() {
                       <td className="py-2">
                         <button
                           onClick={() => handleCancelOrder(order.oid)}
-                          disabled={loading}
+                          disabled={loading || !agentKey || !pin}
                           className="px-3 py-1 bg-red-500 text-white rounded text-sm disabled:opacity-50"
                         >
                           Cancel
@@ -414,7 +519,7 @@ export default function TradeSandboxPage() {
                       <td className="py-2">
                         <button
                           onClick={() => handleClosePosition(position.asset, position.size)}
-                          disabled={loading}
+                          disabled={loading || !agentKey || !pin}
                           className="px-3 py-1 bg-orange-500 text-white rounded text-sm disabled:opacity-50"
                         >
                           Close
@@ -428,6 +533,13 @@ export default function TradeSandboxPage() {
           )}
         </div>
       </Card>
+
+      {/* Setup Agent Modal */}
+      <SetupAgent
+        isOpen={showSetupAgent}
+        onClose={() => setShowSetupAgent(false)}
+        onSuccess={handleAgentSetupSuccess}
+      />
     </div>
   );
 }

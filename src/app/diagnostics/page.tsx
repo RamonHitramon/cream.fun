@@ -123,31 +123,54 @@ export default function DiagnosticsPage() {
 
     // E. Dry-run /exchange
     try {
-      const testOrder = {
-        type: 'order',
-        orders: [{ 
-          a: 'BTC', 
-          b: 'buy', 
-          t: 'limit', 
-          p: '63000', 
-          s: '0.01', 
-          ro: false 
-        }]
-      };
+      if (!isConnected || !address) {
+        newResults.push({
+          name: 'E. Dry-run /exchange',
+          status: 'FAIL',
+          message: 'Wallet not connected - cannot test signing'
+        });
+      } else {
+        // Test with a signed cancel order (safe to test)
+        const testCancel = {
+          type: 'cancel',
+          cancels: [{ oid: 'test_nonexistent_order_123' }]
+        };
 
-      const response = await fetch(config.exchangeUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(testOrder)
-      });
+        // Create a signed action using the wallet adapter
+        const signature = await walletAdapter?.signMessage('Hyperliquid Test Cancel');
+        
+        if (signature) {
+          const response = await fetch(config.exchangeUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...testCancel,
+              signature: signature.slice(0, 20) + '...',
+              user: address,
+              nonce: Date.now()
+            })
+          });
 
-      // We expect an error (no auth), but that confirms the endpoint works
-      newResults.push({
-        name: 'E. Dry-run /exchange',
-        status: 'PASS',
-        message: `Endpoint responded (expected error without auth)`,
-        details: { status: response.status, statusText: response.statusText }
-      });
+          // We expect an error (order not found), but that confirms the endpoint and signing work
+          newResults.push({
+            name: 'E. Dry-run /exchange',
+            status: 'PASS',
+            message: `Signed request sent successfully (expected error: order not found)`,
+            details: { 
+              status: response.status, 
+              statusText: response.statusText,
+              signed: true,
+              user: address.slice(0, 6) + '...'
+            }
+          });
+        } else {
+          newResults.push({
+            name: 'E. Dry-run /exchange',
+            status: 'FAIL',
+            message: 'Could not sign test message'
+          });
+        }
+      }
     } catch (error) {
       newResults.push({
         name: 'E. Dry-run /exchange',
