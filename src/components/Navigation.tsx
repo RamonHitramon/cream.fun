@@ -11,6 +11,8 @@ export function Navigation() {
     { href: '/deposit', label: 'Deposit' },
     { href: '/trade', label: 'Trade' },
     { href: '/withdraw', label: 'Withdraw' },
+    { href: '/diagnostics', label: 'Diagnostics' },
+    { href: '/trade-sandbox', label: 'Sandbox' },
   ];
 
   const isActive = (href: string) => pathname === href;
