@@ -214,7 +214,7 @@ export default function TradeSandboxPage() {
               <div><strong>Wallet:</strong> {address?.slice(0, 6)}...{address?.slice(-4)}</div>
               <div><strong>Agent Key:</strong> {agentKey ? '✅ Configured' : '❌ Not Setup'}</div>
               {agentKey && (
-                <div><strong>Public Key:</strong> {agentKey.publicKey.slice(0, 20)}...</div>
+                                 <div><strong>Public Key:</strong> {agentKey.pub.slice(0, 20)}...</div>
               )}
             </div>
           </div>

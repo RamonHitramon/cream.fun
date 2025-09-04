@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { Card } from '@/features/ui/Card';
-import { generateAgent, saveAgentKey, validatePin, type AgentKey } from '@/services/agent';
+import { generateAgent, saveAgentEncrypted, type AgentKey } from '@/services/agent';
+import { validatePin } from '@/utils/crypto';
 
 interface SetupAgentProps {
   isOpen: boolean;
@@ -45,12 +46,12 @@ export function SetupAgent({ isOpen, onClose, onSuccess }: SetupAgentProps) {
       setError('');
 
       // Generate new agent key
-      const agentKey = await generateAgent(agentName || 'Default Agent');
+      const agentKey = await generateAgent();
       
       // Save encrypted key
-      await saveAgentKey(agentKey, pin);
+      await saveAgentEncrypted({ priv: agentKey.priv }, pin);
       
-      console.log('[HL] Agent key generated and saved:', agentKey.publicKey.slice(0, 20) + '...');
+      console.log('[HL] Agent key generated and saved:', agentKey.pub.slice(0, 20) + '...');
       
       onSuccess(agentKey);
       handleClose();
@@ -111,7 +112,7 @@ export function SetupAgent({ isOpen, onClose, onSuccess }: SetupAgentProps) {
           maxLength={20}
         />
         <p className="text-xs mt-1" style={{ color: 'var(--color-hl-muted)' }}>
-          PIN must be at least 6 digits and contain only numbers
+          PIN must be at least 6 alphanumeric characters
         </p>
       </div>
 

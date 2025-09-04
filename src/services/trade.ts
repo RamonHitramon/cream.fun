@@ -120,7 +120,7 @@ async function ensureAgentKey(pin: string): Promise<AgentKey> {
     const agentKey = await ensureAgent(pin);
     cachedAgentKey = agentKey;
     agentPin = pin;
-    console.log('[HL] Agent key ensured:', agentKey.publicKey.slice(0, 20) + '...');
+    console.log('[HL] Agent key ensured:', agentKey.pub.slice(0, 20) + '...');
     return agentKey;
   } catch (error) {
     console.error('[HL] Failed to ensure agent key:', error);

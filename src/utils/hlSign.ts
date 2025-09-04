@@ -81,7 +81,7 @@ export function signAction(
     };
 
     const messageHash = createMessageHash(context);
-    const privateKeyBytes = hexToBytes(agentKey.privateKey);
+    const privateKeyBytes = hexToBytes(agentKey.priv);
     
     // Sign the message hash
     const signature = secp256k1.sign(messageHash, privateKeyBytes);
@@ -236,7 +236,7 @@ export function validateSignedAction(signedAction: SignedAction): boolean {
  * Get public key from agent key
  */
 export function getPublicKeyFromAgent(agentKey: AgentKey): string {
-  return agentKey.publicKey;
+  return agentKey.pub;
 }
 
 /**

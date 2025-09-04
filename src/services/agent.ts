@@ -1,30 +1,49 @@
+'use client';
+
 import { secp256k1 } from '@noble/curves/secp256k1';
-import { randomBytes } from '@noble/hashes/utils';
+import { keccak_256 } from '@noble/hashes/sha3';
+import { 
+  deriveKeyFromPin, 
+  aesGcmEncrypt, 
+  aesGcmDecrypt, 
+  generateSalt,
+  bytesToBase64,
+  base64ToBytes,
+  validatePin
+} from '@/utils/crypto';
 
+/**
+ * Agent key structure
+ */
 export interface AgentKey {
-  publicKey: string;
-  privateKey: string;
-  createdAt: number;
-  name?: string;
+  priv: string;    // Private key (32 bytes, hex)
+  pub: string;     // Compressed public key (hex)
+  address: string; // EVM address (checksum)
 }
 
-export interface EncryptedAgentKey {
-  encryptedData: string;
-  iv: string;
-  salt: string;
+/**
+ * Encrypted agent key structure
+ */
+interface EncryptedAgentKey {
+  encryptedData: string; // Base64 encoded encrypted private key
+  iv: string;            // Base64 encoded IV
+  salt: string;          // Base64 encoded salt
 }
 
-const DB_NAME = 'HyperliquidAgentDB';
-const DB_VERSION = 1;
-const STORE_NAME = 'agentKeys';
-
-// IndexedDB operations
+/**
+ * IndexedDB wrapper for agent key storage
+ */
 class AgentKeyDB {
+  private dbName = 'HyperliquidAgentDB';
+  private dbVersion = 1;
+  private storeName = 'agentKeys';
   private db: IDBDatabase | null = null;
 
   async init(): Promise<void> {
+    if (this.db) return;
+
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      const request = indexedDB.open(this.dbName, this.dbVersion);
 
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
@@ -34,19 +53,24 @@ class AgentKeyDB {
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-          db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        if (!db.objectStoreNames.contains(this.storeName)) {
+          db.createObjectStore(this.storeName, { keyPath: 'id' });
         }
       };
     });
   }
 
   async saveAgentKey(id: string, encryptedKey: EncryptedAgentKey): Promise<void> {
-    if (!this.db) await this.init();
-
+    await this.init();
+    
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
+      if (!this.db) {
+        reject(new Error('Database not initialized'));
+        return;
+      }
+
+      const transaction = this.db.transaction([this.storeName], 'readwrite');
+      const store = transaction.objectStore(this.storeName);
       const request = store.put({ id, ...encryptedKey });
 
       request.onerror = () => reject(request.error);
@@ -55,22 +79,24 @@ class AgentKeyDB {
   }
 
   async loadAgentKey(id: string): Promise<EncryptedAgentKey | null> {
-    if (!this.db) await this.init();
-
+    await this.init();
+    
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([STORE_NAME], 'readonly');
-      const store = transaction.objectStore(STORE_NAME);
+      if (!this.db) {
+        reject(new Error('Database not initialized'));
+        return;
+      }
+
+      const transaction = this.db.transaction([this.storeName], 'readonly');
+      const store = transaction.objectStore(this.storeName);
       const request = store.get(id);
 
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
         const result = request.result;
         if (result) {
-          resolve({
-            encryptedData: result.encryptedData,
-            iv: result.iv,
-            salt: result.salt
-          });
+          const { encryptedData, iv, salt } = result;
+          resolve({ encryptedData, iv, salt });
         } else {
           resolve(null);
         }
@@ -78,28 +104,17 @@ class AgentKeyDB {
     });
   }
 
-  async listAgentKeys(): Promise<string[]> {
-    if (!this.db) await this.init();
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([STORE_NAME], 'readonly');
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.getAllKeys();
-
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        const keys = request.result as string[];
-        resolve(keys);
-      };
-    });
-  }
-
   async deleteAgentKey(id: string): Promise<void> {
-    if (!this.db) await this.init();
-
+    await this.init();
+    
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
+      if (!this.db) {
+        reject(new Error('Database not initialized'));
+        return;
+      }
+
+      const transaction = this.db.transaction([this.storeName], 'readwrite');
+      const store = transaction.objectStore(this.storeName);
       const request = store.delete(id);
 
       request.onerror = () => reject(request.error);
@@ -108,135 +123,236 @@ class AgentKeyDB {
   }
 }
 
+// Global DB instance
 const agentDB = new AgentKeyDB();
 
-// Crypto utilities
-async function deriveKey(pin: string, salt: Uint8Array): Promise<CryptoKey> {
-  const encoder = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(pin),
-    'PBKDF2',
-    false,
-    ['deriveBits', 'deriveKey']
-  );
+// Storage keys
+const AGENT_KEY_ID = 'hl_agent_key_v1';
+const SALT_KEY = 'hl_agent_salt_v1';
 
-  return crypto.subtle.deriveKey(
-    {
-      name: 'PBKDF2',
-      salt: salt as BufferSource,
-      iterations: 100000,
-      hash: 'SHA-256'
-    },
-    keyMaterial,
-    { name: 'AES-GCM', length: 256 },
-    false,
-    ['encrypt', 'decrypt']
-  );
-}
+/**
+ * Generate new secp256k1 agent key
+ */
+export async function generateAgent(): Promise<AgentKey> {
+  try {
+    // Generate private key (32 bytes)
+    const privateKeyBytes = secp256k1.utils.randomPrivateKey();
+    const privateKeyHex = Array.from(privateKeyBytes).map(b => b.toString(16).padStart(2, '0')).join('');
 
-async function encryptAgentKey(agentKey: AgentKey, pin: string): Promise<EncryptedAgentKey> {
-  const salt = randomBytes(16);
-  const key = await deriveKey(pin, salt);
-  const iv = randomBytes(12);
+    // Generate compressed public key
+    const publicKey = secp256k1.getPublicKey(privateKeyBytes);
+    const publicKeyHex = Array.from(publicKey).map(b => b.toString(16).padStart(2, '0')).join('');
 
-  const encoder = new TextEncoder();
-  const data = encoder.encode(JSON.stringify(agentKey));
+    // Generate EVM address from public key
+    const address = generateEVMAddress(publicKey);
 
-  const encryptedData = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv: iv as BufferSource },
-    key,
-    data
-  );
+    const agentKey: AgentKey = {
+      priv: privateKeyHex,
+      pub: publicKeyHex,
+      address
+    };
 
-  return {
-    encryptedData: btoa(String.fromCharCode(...new Uint8Array(encryptedData))),
-    iv: btoa(String.fromCharCode(...iv)),
-    salt: btoa(String.fromCharCode(...salt))
-  };
-}
-
-async function decryptAgentKey(encryptedKey: EncryptedAgentKey, pin: string): Promise<AgentKey> {
-  const salt = Uint8Array.from(atob(encryptedKey.salt), c => c.charCodeAt(0));
-  const iv = Uint8Array.from(atob(encryptedKey.iv), c => c.charCodeAt(0));
-  const encryptedData = Uint8Array.from(atob(encryptedKey.encryptedData), c => c.charCodeAt(0));
-
-  const key = await deriveKey(pin, salt);
-
-  const decryptedData = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: iv as BufferSource },
-    key,
-    encryptedData
-  );
-
-  const decoder = new TextDecoder();
-  const jsonString = decoder.decode(decryptedData);
-  return JSON.parse(jsonString) as AgentKey;
-}
-
-// Main functions
-export async function generateAgent(name?: string): Promise<AgentKey> {
-  const privateKey = secp256k1.utils.randomPrivateKey();
-  const publicKey = secp256k1.getPublicKey(privateKey);
-
-  const agentKey: AgentKey = {
-    publicKey: Array.from(publicKey).map(b => b.toString(16).padStart(2, '0')).join(''),
-    privateKey: Array.from(privateKey).map(b => b.toString(16).padStart(2, '0')).join(''),
-    createdAt: Date.now(),
-    name
-  };
-
-  return agentKey;
-}
-
-export async function saveAgentKey(agentKey: AgentKey, pin: string): Promise<string> {
-  const encryptedKey = await encryptAgentKey(agentKey, pin);
-  const id = `agent_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
-  await agentDB.saveAgentKey(id, encryptedKey);
-  return id;
-}
-
-export async function loadAgentKey(id: string, pin: string): Promise<AgentKey> {
-  const encryptedKey = await agentDB.loadAgentKey(id);
-  if (!encryptedKey) {
-    throw new Error('Agent key not found');
-  }
-
-  return await decryptAgentKey(encryptedKey, pin);
-}
-
-export async function listAgentKeys(): Promise<string[]> {
-  return await agentDB.listAgentKeys();
-}
-
-export async function deleteAgentKey(id: string): Promise<void> {
-  await agentDB.deleteAgentKey(id);
-}
-
-export async function ensureAgent(pin: string): Promise<AgentKey> {
-  const keys = await listAgentKeys();
-  
-  if (keys.length === 0) {
-    // Generate new agent key
-    const agentKey = await generateAgent('Default Agent');
-    await saveAgentKey(agentKey, pin);
+    console.log('[HL] Agent key generated successfully');
     return agentKey;
+  } catch (error) {
+    console.error('[HL] Error generating agent key:', error);
+    throw new Error('Failed to generate agent key');
   }
-
-  // Use first available key
-  return await loadAgentKey(keys[0], pin);
 }
 
-// Utility functions
-export function getAgentPublicKey(agentKey: AgentKey): string {
-  return agentKey.publicKey;
+/**
+ * Generate EVM address from public key
+ */
+function generateEVMAddress(publicKey: Uint8Array): string {
+  // Remove prefix byte (0x04 for uncompressed, 0x02/0x03 for compressed)
+  const keyBytes = publicKey.slice(1);
+  
+  // Hash with Keccak-256
+  const hash = keccak_256(keyBytes);
+  
+  // Take last 20 bytes
+  const addressBytes = hash.slice(-20);
+  
+  // Convert to hex and add checksum
+  const addressHex = Array.from(addressBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  return addChecksum(addressHex);
 }
 
-export function getAgentPrivateKey(agentKey: AgentKey): string {
-  return agentKey.privateKey;
+/**
+ * Add checksum to address (EIP-55)
+ */
+function addChecksum(address: string): string {
+  const hash = keccak_256(address.toLowerCase());
+  
+  let checksumAddress = '0x';
+  for (let i = 0; i < address.length; i++) {
+    const char = address[i];
+    const hashByte = hash[Math.floor(i / 2)];
+    const nibble = i % 2 === 0 ? hashByte >> 4 : hashByte & 0x0f;
+    
+    checksumAddress += nibble >= 8 ? char.toUpperCase() : char.toLowerCase();
+  }
+  
+  return checksumAddress;
 }
 
-export function validatePin(pin: string): boolean {
-  return pin.length >= 6 && /^[0-9]+$/.test(pin);
+/**
+ * Save encrypted agent key to IndexedDB
+ */
+export async function saveAgentEncrypted(agentKey: Pick<AgentKey, 'priv'>, pin: string): Promise<void> {
+  try {
+    if (!validatePin(pin)) {
+      throw new Error('Invalid PIN format. Must be at least 6 alphanumeric characters.');
+    }
+
+    // Generate salt and derive encryption key
+    const salt = generateSalt();
+    const encryptionKey = await deriveKeyFromPin(pin, salt);
+
+    // Encrypt private key
+    const privateKeyBytes = new TextEncoder().encode(agentKey.priv);
+    const { encryptedData, iv } = await aesGcmEncrypt(privateKeyBytes, encryptionKey);
+
+    // Store encrypted data
+    const encryptedKey: EncryptedAgentKey = {
+      encryptedData: bytesToBase64(encryptedData),
+      iv: bytesToBase64(iv),
+      salt: bytesToBase64(salt)
+    };
+
+    await agentDB.saveAgentKey(AGENT_KEY_ID, encryptedKey);
+    
+    // Store salt in localStorage for validation
+    localStorage.setItem(SALT_KEY, bytesToBase64(salt));
+
+    console.log('[HL] Agent key encrypted and saved successfully');
+  } catch (error) {
+    console.error('[HL] Error saving encrypted agent key:', error);
+    throw new Error('Failed to save encrypted agent key');
+  }
+}
+
+/**
+ * Load and decrypt agent key from IndexedDB
+ */
+export async function loadAgentEncrypted(pin: string): Promise<Pick<AgentKey, 'priv'>> {
+  try {
+    if (!validatePin(pin)) {
+      throw new Error('Invalid PIN format');
+    }
+
+    // Load encrypted key
+    const encryptedKey = await agentDB.loadAgentKey(AGENT_KEY_ID);
+    if (!encryptedKey) {
+      throw new Error('No agent key found');
+    }
+
+    // Decode from base64
+    const salt = base64ToBytes(encryptedKey.salt);
+    const iv = base64ToBytes(encryptedKey.iv);
+    const encryptedData = base64ToBytes(encryptedKey.encryptedData);
+
+    // Derive decryption key
+    const decryptionKey = await deriveKeyFromPin(pin, salt);
+
+    // Decrypt private key
+    const decryptedBytes = await aesGcmDecrypt(encryptedData, decryptionKey, iv);
+    const privateKey = new TextDecoder().decode(decryptedBytes);
+
+    console.log('[HL] Agent key loaded and decrypted successfully');
+    return { priv: privateKey };
+  } catch (error) {
+    console.error('[HL] Error loading encrypted agent key:', error);
+    throw new Error('Failed to load agent key. Check your PIN.');
+  }
+}
+
+/**
+ * Check if agent key exists
+ */
+export async function hasAgent(): Promise<boolean> {
+  try {
+    const encryptedKey = await agentDB.loadAgentKey(AGENT_KEY_ID);
+    return encryptedKey !== null;
+  } catch (error) {
+    console.error('[HL] Error checking agent key existence:', error);
+    return false;
+  }
+}
+
+/**
+ * Reset agent key and salt
+ */
+export async function resetAgent(): Promise<void> {
+  try {
+    // Delete from IndexedDB
+    await agentDB.deleteAgentKey(AGENT_KEY_ID);
+    
+    // Remove salt from localStorage
+    localStorage.removeItem(SALT_KEY);
+    
+    console.log('[HL] Agent key and salt reset successfully');
+  } catch (error) {
+    console.error('[HL] Error resetting agent key:', error);
+    throw new Error('Failed to reset agent key');
+  }
+}
+
+/**
+ * Get agent address from decrypted private key
+ */
+export function getAgentAddress(agentKey: Pick<AgentKey, 'priv'>): string {
+  try {
+    const privateKeyBytes = new Uint8Array(
+      agentKey.priv.match(/.{1,2}/g)?.map(byte => parseInt(byte, 16)) || []
+    );
+    
+    const publicKey = secp256k1.getPublicKey(privateKeyBytes);
+    return generateEVMAddress(publicKey);
+  } catch (error) {
+    console.error('[HL] Error getting agent address:', error);
+    throw new Error('Failed to get agent address');
+  }
+}
+
+/**
+ * Get agent public key from decrypted private key
+ */
+export function getAgentPublic(agentKey: Pick<AgentKey, 'priv'>): string {
+  try {
+    const privateKeyBytes = new Uint8Array(
+      agentKey.priv.match(/.{1,2}/g)?.map(byte => parseInt(byte, 16)) || []
+    );
+    
+    const publicKey = secp256k1.getPublicKey(privateKeyBytes);
+    return Array.from(publicKey).map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch (error) {
+    console.error('[HL] Error getting agent public key:', error);
+    throw new Error('Failed to get agent public key');
+  }
+}
+
+/**
+ * Ensure agent key exists, create if not
+ */
+export async function ensureAgent(pin: string): Promise<AgentKey> {
+  try {
+    if (await hasAgent()) {
+      // Load existing key
+      const { priv } = await loadAgentEncrypted(pin);
+      const pub = getAgentPublic({ priv });
+      const address = getAgentAddress({ priv });
+      
+      return { priv, pub, address };
+    } else {
+      // Generate new key
+      const agentKey = await generateAgent();
+      await saveAgentEncrypted({ priv: agentKey.priv }, pin);
+      return agentKey;
+    }
+  } catch (error) {
+    console.error('[HL] Error ensuring agent key:', error);
+    throw new Error('Failed to ensure agent key');
+  }
 }
