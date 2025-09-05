@@ -20,11 +20,6 @@ interface DiagnosticResult {
 }
 
 export default function DiagnosticsPage() {
-  const { isConnected, address, chainId } = useWalletConnection();
-  const walletAdapter = useWalletAdapter();
-  const [results, setResults] = useState<DiagnosticResult[]>([]);
-  const [isRunning, setIsRunning] = useState(false);
-
   const config = getCurrentConfig();
 
   // В production показываем простую версию без wagmi хуков
@@ -67,6 +62,12 @@ export default function DiagnosticsPage() {
       </div>
     );
   }
+
+  // Хуки вызываются только в development режиме
+  const { isConnected, address, chainId } = useWalletConnection();
+  const walletAdapter = useWalletAdapter();
+  const [results, setResults] = useState<DiagnosticResult[]>([]);
+  const [isRunning, setIsRunning] = useState(false);
 
   const runDiagnostics = async () => {
     setIsRunning(true);
