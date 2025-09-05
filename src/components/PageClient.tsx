@@ -26,7 +26,32 @@ const mockKpiData = [
   { title: 'Active Pairs', value: '0', color: 'default' as const },
 ];
 
-export function PageClient() {
+// Компонент для production режима (без wagmi хуков)
+function ProductionPageClient() {
+  return (
+    <div className="min-h-screen bg-hl-background">
+      <TopBar />
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center text-hl-text">
+          <h1 className="text-2xl font-bold mb-4">Cream.fun Trading Platform</h1>
+          <p className="text-hl-muted">Advanced trading platform for Hyperliquid</p>
+          <div className="mt-8 p-6 bg-hl-surface/50 border border-hl-border rounded-lg max-w-md mx-auto">
+            <h2 className="text-lg font-semibold mb-3" style={{ color: 'var(--color-hl-text)' }}>
+              Production Mode
+            </h2>
+            <p className="text-sm" style={{ color: 'var(--color-hl-muted)' }}>
+              Full trading functionality is available in development mode. 
+              Please run the application locally to access all features.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Компонент для development режима (с wagmi хуками)
+function DevelopmentPageClient() {
   const { markets, loading, error, source, upstreamStatus } = useMarketData();
   const { address: userAddress, isConnected } = useWalletConnection();
   const [pin, setPin] = useState<string>('');
@@ -56,21 +81,6 @@ export function PageClient() {
     }),
     [markets] // Убираем marketPairs из зависимостей
   );
-
-  // В production используем простую версию
-  if (process.env.NODE_ENV === 'production') {
-    return (
-      <div className="min-h-screen bg-hl-background">
-        <TopBar />
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center text-hl-text">
-            <h1 className="text-2xl font-bold mb-4">Cream.fun Trading Platform</h1>
-            <p className="text-hl-muted">Advanced trading platform for Hyperliquid</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (loading) {
     return (
@@ -215,4 +225,15 @@ export function PageClient() {
       </div>
     </div>
   );
+}
+
+// Основной компонент
+export function PageClient() {
+  // В production используем простую версию без wagmi хуков
+  if (process.env.NODE_ENV === 'production') {
+    return <ProductionPageClient />;
+  }
+
+  // В development используем полную версию с wagmi хуками
+  return <DevelopmentPageClient />;
 }
