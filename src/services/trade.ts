@@ -183,6 +183,7 @@ async function ensureAgent(): Promise<{ priv: string; address: string }> {
 }
 
 // Ensure agent key is available
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function ensureAgentKey(pin: string): Promise<AgentKey> {
   if (cachedAgentKey && agentPin === pin) {
     return cachedAgentKey;

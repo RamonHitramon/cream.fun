@@ -9,12 +9,12 @@ import { useMemo } from 'react';
 import '@rainbow-me/rainbowkit/styles.css';
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useMemo(() => new QueryClient(), []);
+
   // В production используем простую версию
   if (process.env.NODE_ENV === 'production') {
     return <>{children}</>;
   }
-
-  const queryClient = useMemo(() => new QueryClient(), []);
 
   return (
     <WagmiProvider config={config}>

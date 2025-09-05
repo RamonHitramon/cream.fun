@@ -27,6 +27,16 @@ const mockKpiData = [
 ];
 
 export function PageClient() {
+  const { markets, loading, error, source, upstreamStatus } = useMarketData();
+  const { address: userAddress, isConnected } = useWalletConnection();
+  const [pin, setPin] = useState<string>('');
+
+  // Auto-refresh data every 15 seconds (only in development)
+  useAutoRefresh({ 
+    userAddress: userAddress || '', 
+    enabled: isConnected && !!userAddress && process.env.NODE_ENV === 'development'
+  });
+
   // В production используем простую версию
   if (process.env.NODE_ENV === 'production') {
     return (
@@ -41,16 +51,6 @@ export function PageClient() {
       </div>
     );
   }
-
-  const { markets, loading, error, source, upstreamStatus } = useMarketData();
-  const { address: userAddress, isConnected } = useWalletConnection();
-  const [pin, setPin] = useState<string>('');
-
-  // Auto-refresh data every 15 seconds (only in development)
-  useAutoRefresh({ 
-    userAddress: userAddress || '', 
-    enabled: isConnected && !!userAddress && process.env.NODE_ENV === 'development'
-  });
 
   // Convert markets to pairs for backward compatibility
   const marketPairs = useMemo(() => 

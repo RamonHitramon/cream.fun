@@ -6,29 +6,32 @@ import { WagmiWalletAdapter } from './wagmiAdapter';
 import type { WalletAdapter } from './adapter';
 
 export function useWalletAdapter(): WalletAdapter | null {
-  // В production возвращаем null
-  if (process.env.NODE_ENV === 'production') {
-    return null;
-  }
-
   const account = useAccount();
   const signMessage = useSignMessage();
   const signTypedData = useSignTypedData();
   const chainId = useChainId();
 
   const adapter = useMemo(() => {
+    // В production возвращаем null
+    if (process.env.NODE_ENV === 'production') {
+      return null;
+    }
+
     if (!account.isConnected || !account.address) {
       return null;
     }
 
     return new WagmiWalletAdapter(account, signMessage, signTypedData, chainId);
-  }, [account.isConnected, account.address, signMessage, signTypedData, chainId]); // Более точные зависимости
+  }, [account, signMessage, signTypedData, chainId]); // Используем полный объект account
 
   return adapter;
 }
 
 // Хук для получения информации о подключении
 export function useWalletConnection() {
+  const account = useAccount();
+  const chainId = useChainId();
+
   // В production используем простую версию без хуков wagmi
   if (process.env.NODE_ENV === 'production') {
     return {
@@ -39,9 +42,6 @@ export function useWalletConnection() {
       isDisconnected: true,
     };
   }
-
-  const account = useAccount();
-  const chainId = useChainId();
 
   return {
     address: account.address,

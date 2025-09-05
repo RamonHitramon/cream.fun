@@ -7,6 +7,9 @@ import { Navigation } from './Navigation';
 import { WalletBalance } from './WalletBalance';
 
 export function TopBar() {
+  const { address, isConnected, chainId } = useWalletConnection();
+  const { disconnect } = useDisconnect();
+
   // В production используем простую версию
   if (process.env.NODE_ENV === 'production') {
     return (
@@ -26,9 +29,6 @@ export function TopBar() {
       </header>
     );
   }
-
-  const { address, isConnected, chainId } = useWalletConnection();
-  const { disconnect } = useDisconnect();
 
   const shortenAddress = (address: string) => {
     return `${address.slice(0, 6)}…${address.slice(-4)}`;

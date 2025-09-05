@@ -9,7 +9,7 @@ import {
   getAgentPublic,
   ensureAgent
 } from '../agent';
-import type { AgentKey } from '../agent';
+// import type { AgentKey } from '../agent';
 
 // Mock the entire agent module
 vi.mock('../agent', async () => {
@@ -50,8 +50,8 @@ vi.mock('@noble/hashes/sha3', () => ({
 describe('Agent Service', () => {
   const mockPin = 'test123';
   const mockPrivateKey = 'a'.repeat(64); // 32 bytes in hex
-  const mockPublicKey = 'b'.repeat(66); // 33 bytes in hex (compressed)
-  const mockAddress = '0x1234567890123456789012345678901234567890';
+  // const mockPublicKey = 'b'.repeat(66); // 33 bytes in hex (compressed)
+  // const mockAddress = '0x1234567890123456789012345678901234567890';
 
   beforeEach(async () => {
     vi.clearAllMocks();

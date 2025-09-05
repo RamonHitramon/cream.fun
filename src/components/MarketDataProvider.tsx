@@ -30,6 +30,13 @@ interface MarketDataProviderProps {
 }
 
 export function MarketDataProvider({ children }: MarketDataProviderProps) {
+  const [markets, setMarkets] = useState<HyperliquidAsset[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [source, setSource] = useState<'upstream' | 'error' | null>(null);
+  const [upstreamStatus, setUpstreamStatus] = useState<{ url: string; status: number } | undefined>();
+
   // В production используем простую версию
   if (process.env.NODE_ENV === 'production') {
     const value: MarketDataContextType = {
@@ -47,13 +54,6 @@ export function MarketDataProvider({ children }: MarketDataProviderProps) {
       </MarketDataContext.Provider>
     );
   }
-
-  const [markets, setMarkets] = useState<HyperliquidAsset[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [source, setSource] = useState<'upstream' | 'error' | null>(null);
-  const [upstreamStatus, setUpstreamStatus] = useState<{ url: string; status: number } | undefined>();
 
   const fetchMarkets = useCallback(async () => {
     try {
@@ -93,7 +93,7 @@ export function MarketDataProvider({ children }: MarketDataProviderProps) {
         clearInterval(interval);
       }
     };
-  }, []); // Убираем fetchMarkets из зависимостей
+  }, [fetchMarkets]); // Добавляем fetchMarkets в зависимости
 
   const value: MarketDataContextType = useMemo(() => ({
     markets,
