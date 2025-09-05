@@ -19,55 +19,56 @@ interface DiagnosticResult {
   details?: Record<string, unknown>;
 }
 
-export default function DiagnosticsPage() {
+// Компонент для production режима (без хуков)
+function ProductionDiagnostics() {
   const config = getCurrentConfig();
-
-  // В production показываем простую версию без wagmi хуков
-  if (process.env.NODE_ENV === 'production') {
-    return (
-      <div className="container mx-auto px-6 py-8">
-        <h1 className="text-3xl font-bold mb-6" style={{ color: 'var(--color-hl-text)' }}>
-          Hyperliquid Integration Diagnostics
-        </h1>
-        
-        <div className="mb-6">
-          <Card>
-            <div className="p-4">
-              <h2 className="text-lg font-semibold mb-3" style={{ color: 'var(--color-hl-text)' }}>
-                Current Configuration
-              </h2>
-              <div className="space-y-2 text-sm">
-                <div><strong>Environment:</strong> {config.infoUrl.includes('testnet') ? 'Testnet' : 'Mainnet'}</div>
-                <div><strong>Info URL:</strong> {config.infoUrl}</div>
-                <div><strong>Exchange URL:</strong> {config.exchangeUrl}</div>
-                <div><strong>Chain ID:</strong> {config.chainId}</div>
-              </div>
+  
+  return (
+    <div className="container mx-auto px-6 py-8">
+      <h1 className="text-3xl font-bold mb-6" style={{ color: 'var(--color-hl-text)' }}>
+        Hyperliquid Integration Diagnostics
+      </h1>
+      
+      <div className="mb-6">
+        <Card>
+          <div className="p-4">
+            <h2 className="text-lg font-semibold mb-3" style={{ color: 'var(--color-hl-text)' }}>
+              Current Configuration
+            </h2>
+            <div className="space-y-2 text-sm">
+              <div><strong>Environment:</strong> {config.infoUrl.includes('testnet') ? 'Testnet' : 'Mainnet'}</div>
+              <div><strong>Info URL:</strong> {config.infoUrl}</div>
+              <div><strong>Exchange URL:</strong> {config.exchangeUrl}</div>
+              <div><strong>Chain ID:</strong> {config.chainId}</div>
             </div>
-          </Card>
-        </div>
-
-        <div className="mb-6">
-          <Card>
-            <div className="p-4">
-              <h2 className="text-lg font-semibold mb-3" style={{ color: 'var(--color-hl-text)' }}>
-                Production Mode
-              </h2>
-              <p className="text-sm" style={{ color: 'var(--color-hl-muted)' }}>
-                Diagnostics are only available in development mode. 
-                Please run the application locally to access full diagnostic capabilities.
-              </p>
-            </div>
-          </Card>
-        </div>
+          </div>
+        </Card>
       </div>
-    );
-  }
 
-  // Хуки вызываются только в development режиме
+      <div className="mb-6">
+        <Card>
+          <div className="p-4">
+            <h2 className="text-lg font-semibold mb-3" style={{ color: 'var(--color-hl-text)' }}>
+              Production Mode
+            </h2>
+            <p className="text-sm" style={{ color: 'var(--color-hl-muted)' }}>
+              Diagnostics are only available in development mode. 
+              Please run the application locally to access full diagnostic capabilities.
+            </p>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// Компонент для development режима (с хуками)
+function DevelopmentDiagnostics() {
   const { isConnected, address, chainId } = useWalletConnection();
   const walletAdapter = useWalletAdapter();
   const [results, setResults] = useState<DiagnosticResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
+  const config = getCurrentConfig();
 
   const runDiagnostics = async () => {
     setIsRunning(true);
@@ -459,4 +460,15 @@ export default function DiagnosticsPage() {
       )}
     </div>
   );
+}
+
+// Основной компонент страницы
+export default function DiagnosticsPage() {
+  // В production используем простую версию без хуков
+  if (process.env.NODE_ENV === 'production') {
+    return <ProductionDiagnostics />;
+  }
+
+  // В development используем полную версию с хуками
+  return <DevelopmentDiagnostics />;
 }
