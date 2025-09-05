@@ -9,7 +9,10 @@
     "lint": "eslint",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "deploy": "./scripts/deploy.sh",
+    "version": "node -e \"console.log(require('./src/lib/version.js').getVersionString())\"",
+    "build-info": "node -e \"console.log(JSON.stringify(require('./src/lib/version.js').getBuildInfo(), null, 2))\""
   },
   "dependencies": {
     "@noble/hashes": "^1.3.3",

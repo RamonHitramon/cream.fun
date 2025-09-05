@@ -1,252 +1,238 @@
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { sha256 } from '@noble/hashes/sha256';
-import type { AgentKey } from '@/services/agent';
 
-// Helper functions for hex conversion
-function hexToBytes(hex: string): Uint8Array {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+export interface SignedAction {
+  action: Record<string, unknown>;
+  nonce: number;
+  signature: string;
+}
+
+// Nonce validation to prevent replay attacks
+let lastUsedNonce: number | null = null;
+
+export function validateNonce(n: number): boolean {
+  if (lastUsedNonce === null) {
+    lastUsedNonce = n;
+    return true;
+  }
+  
+  // Nonce must be greater than the last used nonce
+  if (n <= lastUsedNonce) {
+    return false;
+  }
+  
+  lastUsedNonce = n;
+  return true;
+}
+
+// Helper function to build EIP-712 typed data for debugging
+export function buildTypedData(action: Record<string, unknown>, nonce: number) {
+  // Hyperliquid EIP-712 domain
+  const domain = {
+    name: 'Hyperliquid',
+    version: '1',
+    chainId: 1, // Ethereum mainnet
+  };
+
+  // Action types - adjust based on Hyperliquid's specific requirements
+  const types = {
+    Order: [
+      { name: 'action', type: 'string' },
+      { name: 'nonce', type: 'uint256' },
+      // Add other action-specific fields as needed
+    ],
+  };
+
+  // Message data
+  const message = {
+    action: JSON.stringify(action),
+    nonce: nonce.toString(),
+  };
+
+  return {
+    domain,
+    types,
+    message,
+  };
+}
+
+// Strict serialization of action fields (removes undefined values)
+function serializeAction(action: Record<string, unknown>): Record<string, unknown> {
+  if (action === null || action === undefined) {
+    return action as Record<string, unknown>;
+  }
+  
+  if (typeof action === 'object') {
+    if (Array.isArray(action)) {
+      // Handle arrays by mapping each element and returning as unknown
+      return action.map(serializeAction) as unknown as Record<string, unknown>;
+    }
+    
+    const serialized: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(action)) {
+      if (value !== undefined) {
+        serialized[key] = serializeAction(value as Record<string, unknown>);
+      }
+    }
+    return serialized;
+  }
+  
+  return action as Record<string, unknown>;
+}
+
+// Main signing function - accepts any object type
+export function signAction(action: object, privKeyHex: string, nonce: number): SignedAction {
+  // Validate nonce first
+  if (!validateNonce(nonce)) {
+    throw new Error(`Invalid nonce: ${nonce}. Nonce must be greater than last used nonce.`);
+  }
+
+  // Strictly serialize action (remove undefined fields)
+  const serializedAction = serializeAction(action as Record<string, unknown>);
+  
+  // Build typed data for signing
+  const typedData = buildTypedData(serializedAction, nonce);
+  
+  // Convert private key from hex to bytes
+  const privateKeyBytes = hexToBytes(privKeyHex);
+  
+  // Create message hash using EIP-712 structured data
+  const messageHash = createEIP712Hash(typedData);
+  
+  // Sign the message hash
+  const signature = secp256k1.sign(messageHash, privateKeyBytes);
+  
+  // Convert signature to hex
+  const signatureHex = bytesToHex(signature.toCompactRawBytes());
+  
+  return {
+    action: serializedAction,
+    nonce,
+    signature: signatureHex,
+  };
+}
+
+// Create EIP-712 hash from typed data
+function createEIP712Hash(typedData: {
+  domain: Record<string, unknown>;
+  types: Record<string, Array<{ name: string; type: string }>>;
+  message: Record<string, unknown>;
+}): Uint8Array {
+  const { domain, types, message } = typedData;
+  
+  // EIP-712 encoding
+  const domainSeparator = createDomainSeparator(domain);
+  const messageHash = createMessageHash(message, types.Order);
+  
+  // Final hash: keccak256(0x1901 + domainSeparator + messageHash)
+  const prefix = new Uint8Array([0x19, 0x01]);
+  const combined = new Uint8Array(prefix.length + domainSeparator.length + messageHash.length);
+  
+  combined.set(prefix, 0);
+  combined.set(domainSeparator, prefix.length);
+  combined.set(messageHash, prefix.length + domainSeparator.length);
+  
+  return sha256(combined);
+}
+
+// Create domain separator hash
+function createDomainSeparator(domain: Record<string, unknown>): Uint8Array {
+  const domainType = {
+    EIP712Domain: [
+      { name: 'name', type: 'string' },
+      { name: 'version', type: 'string' },
+      { name: 'chainId', type: 'uint256' },
+    ],
+  };
+  
+  const domainData = {
+    name: domain.name,
+    version: domain.version,
+    chainId: domain.chainId,
+  };
+  
+  return createMessageHash(domainData, domainType.EIP712Domain);
+}
+
+// Create message hash from data and types
+function createMessageHash(data: Record<string, unknown>, types: Array<{ name: string; type: string }>): Uint8Array {
+  // Sort types by name for deterministic encoding
+  const sortedTypes = types.sort((a, b) => a.name.localeCompare(b.name));
+  
+  // Encode each field according to its type
+  const encodedFields: Uint8Array[] = [];
+  
+  for (const type of sortedTypes) {
+    const value = data[type.name];
+    const encoded = encodeValue(value, type.type);
+    encodedFields.push(encoded);
+  }
+  
+  // Concatenate all encoded fields
+  const totalLength = encodedFields.reduce((sum, field) => sum + field.length, 0);
+  const result = new Uint8Array(totalLength);
+  
+  let offset = 0;
+  for (const field of encodedFields) {
+    result.set(field, offset);
+    offset += field.length;
+  }
+  
+  return sha256(result);
+}
+
+// Encode value according to type
+function encodeValue(value: unknown, type: string): Uint8Array {
+  switch (type) {
+    case 'string':
+      return new TextEncoder().encode(value as string);
+    
+    case 'uint256':
+      return encodeUint256(BigInt(value as number | string));
+    
+    case 'address':
+      return hexToBytes((value as string).replace('0x', ''));
+    
+    default:
+      throw new Error(`Unsupported type: ${type}`);
+  }
+}
+
+// Encode uint256 to bytes
+function encodeUint256(value: bigint): Uint8Array {
+  const bytes = new Uint8Array(32);
+  for (let i = 31; i >= 0; i--) {
+    bytes[i] = Number(value & BigInt(0xFF));
+    value >>= BigInt(8);
   }
   return bytes;
 }
 
+// Utility functions for hex conversion
+function hexToBytes(hex: string): Uint8Array {
+  if (hex.startsWith('0x')) {
+    hex = hex.slice(2);
+  }
+  
+  if (hex.length % 2 !== 0) {
+    throw new Error('Hex string must have even length');
+  }
+  
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
+  }
+  
+  return bytes;
+}
+
 function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  return Array.from(bytes)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
 }
 
-export interface HyperliquidAction {
-  type: string;
-  [key: string]: unknown;
-}
-
-export interface SignedAction {
-  action: HyperliquidAction;
-  nonce: number;
-  signature: string;
-  user: string;
-}
-
-export interface SigningContext {
-  action: HyperliquidAction;
-  nonce: number;
-  user: string;
-  timestamp?: number;
-}
-
-/**
- * Create message hash for Hyperliquid action signing
- */
-function createMessageHash(context: SigningContext): Uint8Array {
-  const { action, nonce, user, timestamp = Date.now() } = context;
-  
-  // Create deterministic message string
-  const messageParts = [
-    action.type,
-    nonce.toString(),
-    user.toLowerCase(),
-    timestamp.toString()
-  ];
-
-  // Add action-specific fields in sorted order
-  const actionFields = Object.keys(action)
-    .filter(key => key !== 'type')
-    .sort()
-    .map(key => `${key}:${JSON.stringify(action[key])}`);
-
-  messageParts.push(...actionFields);
-  
-  const message = messageParts.join('|');
-  console.log(`[HL] Signing message: ${message}`);
-  
-  return sha256(message);
-}
-
-/**
- * Sign Hyperliquid action with agent private key
- */
-export function signAction(
-  action: HyperliquidAction,
-  agentKey: AgentKey,
-  nonce: number,
-  user: string,
-  timestamp?: number
-): SignedAction {
-  try {
-    const context: SigningContext = {
-      action,
-      nonce,
-      user,
-      timestamp
-    };
-
-    const messageHash = createMessageHash(context);
-    const privateKeyBytes = hexToBytes(agentKey.priv);
-    
-    // Sign the message hash
-    const signature = secp256k1.sign(messageHash, privateKeyBytes);
-    const signatureHex = bytesToHex(signature.toCompactRawBytes());
-
-    console.log(`[HL] Action signed successfully:`, {
-      type: action.type,
-      nonce,
-      user,
-      signature: signatureHex.slice(0, 20) + '...'
-    });
-
-    return {
-      action,
-      nonce,
-      signature: signatureHex,
-      user
-    };
-  } catch (error) {
-    console.error('[HL] Error signing action:', error);
-    throw new Error(`Failed to sign action: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
-}
-
-/**
- * Verify signature of a signed action
- */
-export function verifySignedAction(signedAction: SignedAction, publicKey: string): boolean {
-  try {
-    const { action, nonce, signature, user } = signedAction;
-    const timestamp = Date.now(); // Use current timestamp for verification
-    
-    const context: SigningContext = {
-      action,
-      nonce,
-      user,
-      timestamp
-    };
-
-    const messageHash = createMessageHash(context);
-    const signatureBytes = hexToBytes(signature);
-    const publicKeyBytes = hexToBytes(publicKey);
-
-    // Verify the signature
-    const isValid = secp256k1.verify(signatureBytes, messageHash, publicKeyBytes);
-    
-    console.log(`[HL] Signature verification: ${isValid ? 'VALID' : 'INVALID'}`);
-    return isValid;
-  } catch (error) {
-    console.error('[HL] Error verifying signature:', error);
-    return false;
-  }
-}
-
-/**
- * Create signed order for Hyperliquid
- */
-export function createSignedOrder(
-  order: {
-    a: string;        // asset
-    b: 'buy' | 'sell'; // side
-    t: 'limit' | 'market'; // type
-    s: string;        // size
-    p?: string;       // price (for limit orders)
-    ro?: boolean;     // reduce only
-  },
-  agentKey: AgentKey,
-  nonce: number,
-  user: string
-): SignedAction {
-  const action: HyperliquidAction = {
-    type: 'order',
-    ...order
-  };
-
-  return signAction(action, agentKey, nonce, user);
-}
-
-/**
- * Create signed cancel order for Hyperliquid
- */
-export function createSignedCancelOrder(
-  oid: string,
-  agentKey: AgentKey,
-  nonce: number,
-  user: string
-): SignedAction {
-  const action: HyperliquidAction = {
-    type: 'cancel',
-    oid
-  };
-
-  return signAction(action, agentKey, nonce, user);
-}
-
-/**
- * Create signed close position for Hyperliquid
- */
-export function createSignedClosePosition(
-  asset: string,
-  size: string,
-  agentKey: AgentKey,
-  nonce: number,
-  user: string
-): SignedAction {
-  const action: HyperliquidAction = {
-    type: 'order',
-    a: asset,
-    b: 'sell', // Assuming long position
-    t: 'market',
-    s: size,
-    ro: true // reduce only
-  };
-
-  return signAction(action, agentKey, nonce, user);
-}
-
-/**
- * Validate signed action structure
- */
-export function validateSignedAction(signedAction: SignedAction): boolean {
-  try {
-    const { action, nonce, signature, user } = signedAction;
-    
-    // Check required fields
-    if (!action || !action.type || typeof nonce !== 'number' || !signature || !user) {
-      return false;
-    }
-
-    // Validate nonce
-    if (nonce < 0 || !Number.isInteger(nonce)) {
-      return false;
-    }
-
-    // Validate signature format (hex string)
-    if (typeof signature !== 'string' || !/^[0-9a-fA-F]+$/.test(signature)) {
-      return false;
-    }
-
-    // Validate user address format
-    if (typeof user !== 'string' || user.length < 20) {
-      return false;
-    }
-
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Get public key from agent key
- */
-export function getPublicKeyFromAgent(agentKey: AgentKey): string {
-  return agentKey.pub;
-}
-
-/**
- * Create action payload for API submission
- */
-export function createActionPayload(signedAction: SignedAction): Record<string, unknown> {
-  return {
-    ...signedAction.action,
-    nonce: signedAction.nonce,
-    signature: signedAction.signature,
-    user: signedAction.user
-  };
+// Reset nonce validation (useful for testing or resetting state)
+export function resetNonceValidation(): void {
+  lastUsedNonce = null;
 }

@@ -1,12 +1,7 @@
 import { getCurrentConfig } from '@/config/hyperliquid';
-import { ensureAgent, type AgentKey } from './agent';
-import { getFreshNonce, bumpNonce } from './nonce';
-import {
-  createSignedOrder,
-  createSignedCancelOrder,
-  createSignedClosePosition,
-  createActionPayload
-} from '@/utils/hlSign';
+import { ensureAgent as ensureAgentFromService, hasAgent, type AgentKey } from './agent';
+import { getNonce, bumpNonce, resetNonce, getRemoteNonce } from './nonce';
+import { signAction, type SignedAction } from '@/utils/hlSign';
 
 export interface OrderRequest {
   a: string;        // asset (BTC, ETH, etc.)
@@ -15,6 +10,7 @@ export interface OrderRequest {
   s: string;        // size
   p?: string;       // price (required for limit orders)
   ro?: boolean;     // reduce only
+  cloid?: string;   // client order ID for idempotency
 }
 
 export interface CancelRequest {
@@ -110,6 +106,82 @@ function mapErrorToReadable(error: unknown): string {
   return 'Unknown error occurred';
 }
 
+// Post signed action to exchange with retry logic
+async function postExchange(signed: SignedAction, userAddress?: string): Promise<Record<string, unknown>> {
+  const config = getCurrentConfig();
+  
+  try {
+    const response = await fetchWithRetry(config.exchangeUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...signed.action,
+        nonce: signed.nonce,
+        signature: signed.signature,
+        user: userAddress
+      })
+    });
+
+    const data = await response.json();
+    
+    if (response.ok) {
+      return data;
+    } else {
+      throw new Error(`Exchange error: ${response.status} ${response.statusText}`);
+    }
+  } catch (error) {
+    console.error('[HL] Exchange post failed:', error);
+    throw error;
+  }
+}
+
+// Retry logic for signing/nonce errors
+async function retryWithNonceReset<T>(
+  operation: () => Promise<T>,
+  agentAddress: string
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    // Check if it's a signing/nonce related error
+    const errorMsg = error instanceof Error ? error.message.toLowerCase() : '';
+    if (errorMsg.includes('nonce') || errorMsg.includes('signature') || errorMsg.includes('invalid')) {
+      console.log('[HL] Nonce/signing error detected, attempting retry...');
+      
+      // Reset nonce and retry once
+      await resetNonce(agentAddress);
+      
+      // Get fresh nonce from remote
+      await getRemoteNonce(agentAddress);
+      
+      // Retry operation
+      return await operation();
+    }
+    
+    // Re-throw if not a nonce/signing error
+    throw error;
+  }
+}
+
+// Ensure agent key is available (UI will call this)
+async function ensureAgent(): Promise<{ priv: string; address: string }> {
+  try {
+    // Check if agent exists
+    if (!(await hasAgent())) {
+      // Show SetupAgent modal for key generation and PIN setup
+      // This will be handled by the UI layer
+      throw new Error('Agent setup required. Please use SetupAgent modal first.');
+    }
+    
+    // Agent exists, but we need PIN to decrypt it
+    // For now, throw error to prompt UI to show PIN input
+    throw new Error('PIN required to decrypt agent key. Please enter your PIN.');
+  } catch (error) {
+    console.error('[HL] Agent setup error:', error);
+    throw error;
+  }
+}
+
 // Ensure agent key is available
 async function ensureAgentKey(pin: string): Promise<AgentKey> {
   if (cachedAgentKey && agentPin === pin) {
@@ -117,7 +189,7 @@ async function ensureAgentKey(pin: string): Promise<AgentKey> {
   }
 
   try {
-    const agentKey = await ensureAgent(pin);
+    const agentKey = await ensureAgentFromService(pin);
     cachedAgentKey = agentKey;
     agentPin = pin;
     console.log('[HL] Agent key ensured:', agentKey.pub.slice(0, 20) + '...');
@@ -138,44 +210,24 @@ export async function placeOrder(
     console.log('[HL] Placing order:', order);
     
     // Ensure agent key is available
-    const agentKey = await ensureAgentKey(pin);
+    const agent = await ensureAgent();
     
-    // Get fresh nonce
-    const nonce = await getFreshNonce(userAddress);
+    // Use retry logic for signing and exchange operations
+    const result = await retryWithNonceReset(async () => {
+      const nonce = await getNonce(agent.address);
+      const signed = await signAction(order, agent.priv, nonce);
+      return await postExchange(signed, userAddress);
+    }, agent.address);
     
-    // Create signed order
-    const signedOrder = createSignedOrder(order, agentKey, nonce, userAddress);
+    // Bump nonce after successful order
+    await bumpNonce(agent.address);
     
-    // Create payload for API
-    const payload = createActionPayload(signedOrder);
-    
-    const config = getCurrentConfig();
-    const response = await fetchWithRetry(config.exchangeUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await response.json();
-    
-    if (response.ok) {
-      // Bump nonce after successful order
-      await bumpNonce(userAddress);
-      
-      console.log('[HL] Order placed successfully:', data);
-      return {
-        success: true,
-        data,
-        orderId: data.orderId || data.oid
-      };
-    } else {
-      const errorMsg = mapErrorToReadable(data);
-      console.error('[HL] Order placement failed:', data);
-      return {
-        success: false,
-        error: errorMsg
-      };
-    }
+    console.log('[HL] Order placed successfully:', result);
+    return {
+      success: true,
+      data: result,
+      orderId: (result.orderId as string) || (result.oid as string)
+    };
   } catch (error) {
     const errorMsg = mapErrorToReadable(error);
     console.error('[HL] Order placement error:', error);
@@ -196,43 +248,24 @@ export async function cancelOrder(
     console.log('[HL] Cancelling order:', oid);
     
     // Ensure agent key is available
-    const agentKey = await ensureAgentKey(pin);
+    const agent = await ensureAgent();
     
-    // Get fresh nonce
-    const nonce = await getFreshNonce(userAddress);
+    // Use retry logic for signing and exchange operations
+    const result = await retryWithNonceReset(async () => {
+      const nonce = await getNonce(agent.address);
+      const cancelAction = { type: 'cancel', oid };
+      const signed = await signAction(cancelAction, agent.priv, nonce);
+      return await postExchange(signed, userAddress);
+    }, agent.address);
     
-    // Create signed cancel order
-    const signedCancel = createSignedCancelOrder(oid, agentKey, nonce, userAddress);
+    // Bump nonce after successful cancellation
+    await bumpNonce(agent.address);
     
-    // Create payload for API
-    const payload = createActionPayload(signedCancel);
-
-    const config = getCurrentConfig();
-    const response = await fetchWithRetry(config.exchangeUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await response.json();
-    
-    if (response.ok) {
-      // Bump nonce after successful cancellation
-      await bumpNonce(userAddress);
-      
-      console.log('[HL] Order cancelled successfully:', data);
-      return {
-        success: true,
-        data
-      };
-    } else {
-      const errorMsg = mapErrorToReadable(data);
-      console.error('[HL] Order cancellation failed:', data);
-      return {
-        success: false,
-        error: errorMsg
-      };
-    }
+    console.log('[HL] Order cancelled successfully:', result);
+    return {
+      success: true,
+      data: result
+    };
   } catch (error) {
     const errorMsg = mapErrorToReadable(error);
     console.error('[HL] Order cancellation error:', error);
@@ -254,43 +287,31 @@ export async function closePosition(
     console.log('[HL] Closing position:', { asset, size });
     
     // Ensure agent key is available
-    const agentKey = await ensureAgentKey(pin);
+    const agent = await ensureAgent();
     
-    // Get fresh nonce
-    const nonce = await getFreshNonce(userAddress);
-    
-    // Create signed close position
-    const signedClose = createSignedClosePosition(asset, size, agentKey, nonce, userAddress);
-    
-    // Create payload for API
-    const payload = createActionPayload(signedClose);
-
-    const config = getCurrentConfig();
-    const response = await fetchWithRetry(config.exchangeUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await response.json();
-    
-    if (response.ok) {
-      // Bump nonce after successful position close
-      await bumpNonce(userAddress);
-      
-      console.log('[HL] Position closed successfully:', data);
-      return {
-        success: true,
-        data
+    // Use retry logic for signing and exchange operations
+    const result = await retryWithNonceReset(async () => {
+      const nonce = await getNonce(agent.address);
+      const closeAction = {
+        type: 'order',
+        a: asset,
+        b: 'sell', // Assuming long position
+        t: 'market',
+        s: size,
+        ro: true // reduce only
       };
-    } else {
-      const errorMsg = mapErrorToReadable(data);
-      console.error('[HL] Position close failed:', data);
-      return {
-        success: false,
-        error: errorMsg
-      };
-    }
+      const signed = await signAction(closeAction, agent.priv, nonce);
+      return await postExchange(signed, userAddress);
+    }, agent.address);
+    
+    // Bump nonce after successful position close
+    await bumpNonce(agent.address);
+    
+    console.log('[HL] Position closed successfully:', result);
+    return {
+      success: true,
+      data: result
+    };
   } catch (error) {
     const errorMsg = mapErrorToReadable(error);
     console.error('[HL] Position close error:', error);

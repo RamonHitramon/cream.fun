@@ -8,6 +8,7 @@ import { HyperliquidAsset } from '@/lib/hyperliquid/types';
 import { usePerpMetas } from '@/features/trade/hl/usePerpMetas';
 import { useBasketPreview } from '@/features/trade/basket/useBasketPreview';
 import { useWalletGuard } from '@/components/WalletGuard';
+import { RealtimeMarketData } from '@/components/RealtimeMarketData';
 
 export interface CreateStrategyProps {
   pairs: string[];
@@ -64,6 +65,9 @@ export function CreateStrategy({ pairs, markets }: CreateStrategyProps) {
     // Здесь будет логика открытия позиции
     console.log('Opening position with preview:', preview);
   };
+
+  // Get selected assets for realtime data
+  const selectedAssets = [...longSelectedPairs, ...shortSelectedPairs];
 
   return (
     <Card>
@@ -138,6 +142,13 @@ export function CreateStrategy({ pairs, markets }: CreateStrategyProps) {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Real-time Market Data */}
+        {selectedAssets.length > 0 && (
+          <div className="mt-6">
+            <RealtimeMarketData assets={selectedAssets} />
           </div>
         )}
       </div>

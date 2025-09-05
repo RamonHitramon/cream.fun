@@ -1,13 +1,17 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { TopBar } from '@/components/TopBar';
 import { KPIPanel } from '@/features/ui/KPI';
 import { CreateStrategy } from '@/features/strategy/CreateStrategy';
 import { ActivePositions } from '@/features/positions/ActivePositions';
-import { OrderHistory } from '@/features/orders/OrderHistory';
+import { OpenOrders } from '@/features/orders/OpenOrders';
+import { FillsTable } from '@/components/FillsTable';
+import { BalancePanel } from '@/components/BalancePanel';
 import { useMarketData } from './MarketDataProvider';
 import { HyperliquidAsset } from '@/lib/hyperliquid/types';
+import { useWalletConnection } from '@/lib/wallet/useWalletAdapter';
+import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 import DebugMarkets from './DebugMarkets';
 
 // Mock KPI data for now
@@ -24,6 +28,14 @@ const mockKpiData = [
 
 export function PageClient() {
   const { markets, loading, error, source, upstreamStatus } = useMarketData();
+  const { address: userAddress, isConnected } = useWalletConnection();
+  const [pin, setPin] = useState<string>('');
+
+  // Auto-refresh data every 15 seconds
+  useAutoRefresh({ 
+    userAddress: userAddress || '', 
+    enabled: isConnected && !!userAddress 
+  });
 
   // Convert markets to pairs for backward compatibility
   const marketPairs = markets.map((market: HyperliquidAsset) => market.symbol);
@@ -114,12 +126,71 @@ export function PageClient() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <CreateStrategy pairs={marketPairs} markets={markets} />
-          <ActivePositions />
+        {/* PIN Input for authenticated users */}
+        {isConnected && userAddress && (
+          <div className="mb-6 p-4 bg-hl-surface/50 border border-hl-border rounded-lg">
+            <div className="flex items-center gap-4">
+              <label className="text-sm font-medium" style={{ color: 'var(--color-hl-text)' }}>
+                PIN for trading:
+              </label>
+              <input
+                type="password"
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+                placeholder="Enter your PIN"
+                className="px-3 py-2 rounded border text-sm"
+                style={{
+                  backgroundColor: 'var(--color-hl-surface)',
+                  borderColor: 'var(--color-hl-border)',
+                  color: 'var(--color-hl-text)'
+                }}
+              />
+              <span className="text-xs text-hl-muted">
+                Required for placing orders and closing positions
+              </span>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          {/* Main Content - 2 columns */}
+          <div className="lg:col-span-2 space-y-6">
+            <CreateStrategy pairs={marketPairs} markets={markets} />
+            {isConnected && userAddress && pin ? (
+              <ActivePositions userAddress={userAddress} pin={pin} />
+            ) : (
+              <div className="p-6 border-2 border-dashed border-hl-border rounded-lg">
+                <div className="text-center text-hl-muted">
+                  <div className="text-lg font-medium mb-2">Connect Wallet & Enter PIN</div>
+                  <div className="text-sm">To view your positions and place orders</div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right Sidebar - 1 column */}
+          <div className="space-y-6">
+            <BalancePanel />
+          </div>
         </div>
 
-        <OrderHistory />
+        {/* Open Orders and Trade History */}
+        {isConnected && userAddress && pin && (
+          <>
+            <div className="mb-6">
+              <OpenOrders userAddress={userAddress} pin={pin} />
+            </div>
+            <FillsTable userAddress={userAddress} pin={pin} />
+          </>
+        )}
+
+        {/* Show message for non-connected users */}
+        {!isConnected && (
+          <div className="text-center py-12 text-hl-muted">
+            <div className="text-lg font-medium mb-2">Connect Your Wallet</div>
+            <div className="text-sm">Connect your wallet to start trading and view your portfolio</div>
+          </div>
+        )}
       </div>
     </div>
   );

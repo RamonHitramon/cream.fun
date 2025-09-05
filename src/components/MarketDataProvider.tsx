@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { HyperliquidAsset, HyperliquidResponse } from '@/lib/hyperliquid/types';
 
 interface MarketDataContextType {
@@ -70,14 +70,14 @@ export function MarketDataProvider({ children }: MarketDataProviderProps) {
     return () => clearInterval(interval);
   }, []);
 
-  const value: MarketDataContextType = {
+  const value: MarketDataContextType = useMemo(() => ({
     markets,
     loading,
     error,
     lastUpdated,
     source,
     upstreamStatus,
-  };
+  }), [markets, loading, error, lastUpdated, source, upstreamStatus]);
 
   return (
     <MarketDataContext.Provider value={value}>
