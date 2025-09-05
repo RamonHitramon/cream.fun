@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import { HyperliquidAsset, HyperliquidResponse } from '@/lib/hyperliquid/types';
 
 interface MarketDataContextType {
@@ -30,6 +30,24 @@ interface MarketDataProviderProps {
 }
 
 export function MarketDataProvider({ children }: MarketDataProviderProps) {
+  // В production используем простую версию
+  if (process.env.NODE_ENV === 'production') {
+    const value: MarketDataContextType = {
+      markets: [],
+      loading: false,
+      error: null,
+      lastUpdated: new Date(),
+      source: 'upstream',
+      upstreamStatus: { url: 'https://api.hyperliquid.xyz/info', status: 200 },
+    };
+
+    return (
+      <MarketDataContext.Provider value={value}>
+        {children}
+      </MarketDataContext.Provider>
+    );
+  }
+
   const [markets, setMarkets] = useState<HyperliquidAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +55,7 @@ export function MarketDataProvider({ children }: MarketDataProviderProps) {
   const [source, setSource] = useState<'upstream' | 'error' | null>(null);
   const [upstreamStatus, setUpstreamStatus] = useState<{ url: string; status: number } | undefined>();
 
-  const fetchMarkets = async () => {
+  const fetchMarkets = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -59,16 +77,23 @@ export function MarketDataProvider({ children }: MarketDataProviderProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchMarkets();
     
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchMarkets, 30000);
+    // Auto-refresh every 30 seconds (only in development)
+    let interval: NodeJS.Timeout | null = null;
+    if (process.env.NODE_ENV === 'development') {
+      interval = setInterval(fetchMarkets, 30000);
+    }
     
-    return () => clearInterval(interval);
-  }, []);
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, []); // Убираем fetchMarkets из зависимостей
 
   const value: MarketDataContextType = useMemo(() => ({
     markets,

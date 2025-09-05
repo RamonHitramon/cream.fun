@@ -31,7 +31,26 @@ export interface MarketDataState {
   clearAssetData: (asset: string) => void;
 }
 
+// Global WebSocket client instance to avoid multiple initializations
+let globalWSClient: ReturnType<typeof getWSClient> | null = null;
+
 export const useMarketDataStore = create<MarketDataState>((set, get) => {
+  // Initialize WebSocket client only once and only in development
+  if (!globalWSClient && typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+    try {
+      globalWSClient = getWSClient();
+      
+      // Set up WebSocket callbacks only once
+      globalWSClient.addListener('trades', (data: unknown) => {
+        get().handleTrade(data as TradeData);
+      });
+      globalWSClient.addListener('orderbook', (data: unknown) => {
+        get().handleOrderBook(data as OrderBookData);
+      });
+    } catch (error) {
+      console.warn('WebSocket initialization failed:', error);
+    }
+  }
 
   return {
     // Initial state
@@ -62,10 +81,15 @@ export const useMarketDataStore = create<MarketDataState>((set, get) => {
         }
       }));
 
-      // Subscribe to WebSocket channels
-      const wsClient = getWSClient();
-      wsClient.subscribeTrades(asset);
-      wsClient.subscribeOrderBook(asset);
+      // Subscribe to WebSocket channels (only in development)
+      if (globalWSClient && process.env.NODE_ENV === 'development') {
+        try {
+          globalWSClient.subscribeTrades(asset);
+          globalWSClient.subscribeOrderBook(asset);
+        } catch (error) {
+          console.warn('WebSocket subscription failed:', error);
+        }
+      }
 
       console.log(`[MarketData] Subscribed to ${asset}`);
     },
@@ -85,10 +109,15 @@ export const useMarketDataStore = create<MarketDataState>((set, get) => {
         subscribedAssets: newSubscribedAssets
       });
 
-      // Unsubscribe from WebSocket channels
-      const wsClient = getWSClient();
-      wsClient.unsubscribe(asset, 'trades');
-      wsClient.unsubscribe(asset, 'l2Book');
+      // Unsubscribe from WebSocket channels (only in development)
+      if (globalWSClient && process.env.NODE_ENV === 'development') {
+        try {
+          globalWSClient.unsubscribe(asset, 'trades');
+          globalWSClient.unsubscribe(asset, 'l2Book');
+        } catch (error) {
+          console.warn('WebSocket unsubscription failed:', error);
+        }
+      }
 
       // Clear data for this asset
       get().clearAssetData(asset);

@@ -48,7 +48,7 @@ export function useAutoRefresh({
         intervalRef.current = null;
       }
     };
-  }, [userAddress, enabled, interval]);
+  }, [userAddress, enabled, interval]); // Зависимости выглядят правильно
 
   // Cleanup on unmount
   useEffect(() => {

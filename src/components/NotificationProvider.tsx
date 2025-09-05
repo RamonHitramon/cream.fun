@@ -5,6 +5,11 @@ import { useNotifications } from './Notification';
 import { Notification } from './Notification';
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
+  // В production используем простую версию
+  if (process.env.NODE_ENV === 'production') {
+    return <>{children}</>;
+  }
+
   const { notifications, removeNotification } = useNotifications();
 
   return (

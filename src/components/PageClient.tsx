@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { TopBar } from '@/components/TopBar';
 import { KPIPanel } from '@/features/ui/KPI';
 import { CreateStrategy } from '@/features/strategy/CreateStrategy';
@@ -27,29 +27,50 @@ const mockKpiData = [
 ];
 
 export function PageClient() {
+  // В production используем простую версию
+  if (process.env.NODE_ENV === 'production') {
+    return (
+      <div className="min-h-screen bg-hl-background">
+        <TopBar />
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center text-hl-text">
+            <h1 className="text-2xl font-bold mb-4">Cream.fun Trading Platform</h1>
+            <p className="text-hl-muted">Advanced trading platform for Hyperliquid</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const { markets, loading, error, source, upstreamStatus } = useMarketData();
   const { address: userAddress, isConnected } = useWalletConnection();
   const [pin, setPin] = useState<string>('');
 
-  // Auto-refresh data every 15 seconds
+  // Auto-refresh data every 15 seconds (only in development)
   useAutoRefresh({ 
     userAddress: userAddress || '', 
-    enabled: isConnected && !!userAddress 
+    enabled: isConnected && !!userAddress && process.env.NODE_ENV === 'development'
   });
 
   // Convert markets to pairs for backward compatibility
-  const marketPairs = markets.map((market: HyperliquidAsset) => market.symbol);
+  const marketPairs = useMemo(() => 
+    markets.map((market: HyperliquidAsset) => market.symbol), 
+    [markets]
+  );
 
   // Update KPI data with real market count
-  const updatedKpiData = mockKpiData.map(item => {
-    if (item.title === 'Total Markets') {
-      return { ...item, value: markets.length.toString() };
-    }
-    if (item.title === 'Active Pairs') {
-      return { ...item, value: marketPairs.length.toString() };
-    }
-    return item;
-  });
+  const updatedKpiData = useMemo(() => 
+    mockKpiData.map(item => {
+      if (item.title === 'Total Markets') {
+        return { ...item, value: markets.length.toString() };
+      }
+      if (item.title === 'Active Pairs') {
+        return { ...item, value: markets.length.toString() }; // Используем markets.length вместо marketPairs.length
+      }
+      return item;
+    }), 
+    [markets] // Убираем marketPairs из зависимостей
+  );
 
   if (loading) {
     return (

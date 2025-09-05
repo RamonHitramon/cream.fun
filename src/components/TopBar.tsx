@@ -7,6 +7,26 @@ import { Navigation } from './Navigation';
 import { WalletBalance } from './WalletBalance';
 
 export function TopBar() {
+  // В production используем простую версию
+  if (process.env.NODE_ENV === 'production') {
+    return (
+      <header className="px-6 py-4 border-b" style={{ backgroundColor: 'var(--color-hl-surface)', borderColor: 'var(--color-hl-border)' }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg font-bold" style={{ backgroundColor: 'var(--color-hl-primary)', color: 'var(--color-hl-bg)' }}>C</div>
+              <h1 className="text-xl font-bold" style={{ color: 'var(--color-hl-text)' }}>cream.fun</h1>
+            </div>
+            <Navigation />
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="px-3 py-2 rounded-lg border text-sm" style={{ backgroundColor: 'var(--color-hl-surface)', borderColor: 'var(--color-hl-border)', color: 'var(--color-hl-muted)' }}>Ethereum</div>
+          </div>
+        </div>
+      </header>
+    );
+  }
+
   const { address, isConnected, chainId } = useWalletConnection();
   const { disconnect } = useDisconnect();
 
