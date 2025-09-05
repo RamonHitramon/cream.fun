@@ -37,21 +37,6 @@ export function PageClient() {
     enabled: isConnected && !!userAddress && process.env.NODE_ENV === 'development'
   });
 
-  // В production используем простую версию
-  if (process.env.NODE_ENV === 'production') {
-    return (
-      <div className="min-h-screen bg-hl-background">
-        <TopBar />
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center text-hl-text">
-            <h1 className="text-2xl font-bold mb-4">Cream.fun Trading Platform</h1>
-            <p className="text-hl-muted">Advanced trading platform for Hyperliquid</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // Convert markets to pairs for backward compatibility
   const marketPairs = useMemo(() => 
     markets.map((market: HyperliquidAsset) => market.symbol), 
@@ -68,9 +53,24 @@ export function PageClient() {
         return { ...item, value: markets.length.toString() }; // Используем markets.length вместо marketPairs.length
       }
       return item;
-    }), 
+    }),
     [markets] // Убираем marketPairs из зависимостей
   );
+
+  // В production используем простую версию
+  if (process.env.NODE_ENV === 'production') {
+    return (
+      <div className="min-h-screen bg-hl-background">
+        <TopBar />
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center text-hl-text">
+            <h1 className="text-2xl font-bold mb-4">Cream.fun Trading Platform</h1>
+            <p className="text-hl-muted">Advanced trading platform for Hyperliquid</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

@@ -37,37 +37,19 @@ export function MarketDataProvider({ children }: MarketDataProviderProps) {
   const [source, setSource] = useState<'upstream' | 'error' | null>(null);
   const [upstreamStatus, setUpstreamStatus] = useState<{ url: string; status: number } | undefined>();
 
-  // В production используем простую версию
-  if (process.env.NODE_ENV === 'production') {
-    const value: MarketDataContextType = {
-      markets: [],
-      loading: false,
-      error: null,
-      lastUpdated: new Date(),
-      source: 'upstream',
-      upstreamStatus: { url: 'https://api.hyperliquid.xyz/info', status: 200 },
-    };
-
-    return (
-      <MarketDataContext.Provider value={value}>
-        {children}
-      </MarketDataContext.Provider>
-    );
-  }
-
   const fetchMarkets = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await fetch('/api/hyperliquid/markets', { cache: 'no-store' });
       const data: HyperliquidResponse = await response.json();
-      
+
       setMarkets(data.perps);
       setSource(data.source);
       setUpstreamStatus(data.upstreamStatus);
       setLastUpdated(new Date());
-      
+
       if (data.error) {
         setError(data.error);
       }
@@ -81,13 +63,13 @@ export function MarketDataProvider({ children }: MarketDataProviderProps) {
 
   useEffect(() => {
     fetchMarkets();
-    
+
     // Auto-refresh every 30 seconds (only in development)
     let interval: NodeJS.Timeout | null = null;
     if (process.env.NODE_ENV === 'development') {
       interval = setInterval(fetchMarkets, 30000);
     }
-    
+
     return () => {
       if (interval) {
         clearInterval(interval);
@@ -95,14 +77,28 @@ export function MarketDataProvider({ children }: MarketDataProviderProps) {
     };
   }, [fetchMarkets]); // Добавляем fetchMarkets в зависимости
 
-  const value: MarketDataContextType = useMemo(() => ({
-    markets,
-    loading,
-    error,
-    lastUpdated,
-    source,
-    upstreamStatus,
-  }), [markets, loading, error, lastUpdated, source, upstreamStatus]);
+  const value: MarketDataContextType = useMemo(() => {
+    // В production используем простую версию
+    if (process.env.NODE_ENV === 'production') {
+      return {
+        markets: [],
+        loading: false,
+        error: null,
+        lastUpdated: new Date(),
+        source: 'upstream',
+        upstreamStatus: { url: 'https://api.hyperliquid.xyz/info', status: 200 },
+      };
+    }
+
+    return {
+      markets,
+      loading,
+      error,
+      lastUpdated,
+      source,
+      upstreamStatus,
+    };
+  }, [markets, loading, error, lastUpdated, source, upstreamStatus]);
 
   return (
     <MarketDataContext.Provider value={value}>
