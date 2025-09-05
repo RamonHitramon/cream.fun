@@ -18,7 +18,51 @@ import { getCurrentConfig } from '@/config/hyperliquid';
 import { SetupAgent } from '@/components/SetupAgent';
 import type { AgentKey } from '@/services/agent';
 
-export default function TradeSandboxPage() {
+// Компонент для production режима (без хуков)
+function ProductionTradeSandbox() {
+  const config = getCurrentConfig();
+  
+  return (
+    <div className="container mx-auto px-6 py-8">
+      <h1 className="text-3xl font-bold mb-6" style={{ color: 'var(--color-hl-text)' }}>
+        Trading Sandbox
+      </h1>
+
+      <div className="mb-6">
+        <Card>
+          <div className="p-4">
+            <h2 className="text-lg font-semibold mb-3" style={{ color: 'var(--color-hl-text)' }}>
+              Current Configuration
+            </h2>
+            <div className="space-y-2 text-sm">
+              <div><strong>Environment:</strong> {config.infoUrl.includes('testnet') ? 'Testnet' : 'Mainnet'}</div>
+              <div><strong>Info URL:</strong> {config.infoUrl}</div>
+              <div><strong>Exchange URL:</strong> {config.exchangeUrl}</div>
+              <div><strong>Chain ID:</strong> {config.chainId}</div>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <div className="mb-6">
+        <Card>
+          <div className="p-6 text-center">
+            <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--color-hl-text)' }}>
+              Production Mode
+            </h2>
+            <p className="text-sm" style={{ color: 'var(--color-hl-muted)' }}>
+              Trading sandbox is only available in development mode. 
+              Please run the application locally to access full trading capabilities.
+            </p>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// Компонент для development режима (с хуками)
+function DevelopmentTradeSandbox() {
   const { isConnected, address } = useWalletConnection();
   const [orders, setOrders] = useState<OpenOrder[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
@@ -542,4 +586,15 @@ export default function TradeSandboxPage() {
       />
     </div>
   );
+}
+
+// Основной компонент страницы
+export default function TradeSandboxPage() {
+  // В production используем простую версию без хуков
+  if (process.env.NODE_ENV === 'production') {
+    return <ProductionTradeSandbox />;
+  }
+
+  // В development используем полную версию с хуками
+  return <DevelopmentTradeSandbox />;
 }
